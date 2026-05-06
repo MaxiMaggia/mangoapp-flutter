@@ -1,0 +1,46 @@
+name: mango
+description: "Mango - App de gestión de gastos personales"
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.4 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.6
+
+  # Routing
+  go_router: ^13.2.4
+
+  # State management (MVVM)
+  flutter_riverpod: ^2.5.1
+
+  # Equatable para estados y entidades inmutables
+  equatable: ^2.0.5
+
+  # Helpers
+  collection: ^1.18.0
+  intl: ^0.19.0
+
+  # UI extras
+  flutter_slidable: ^4.0.0
+
+  # Charts
+  fl_chart: ^0.66.2
+
+  # ===== Las siguientes se descomentan en la fase de integración con Firebase =====
+  # firebase_core: ^2.27.0
+  # cloud_firestore: ^4.15.8
+  # firebase_auth: ^4.17.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  mocktail: ^1.0.3
+
+flutter:
+  uses-material-design: true
