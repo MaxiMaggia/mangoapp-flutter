@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mango/data/firestore_expenses_repository.dart';
 
 import '../domain/auth_repository.dart';
 import '../domain/categories_repository.dart';
 import '../domain/expenses_repository.dart';
 import 'fake_auth_repository.dart';
 import 'fake_categories_repository.dart';
-import 'fake_expenses_repository.dart';
 
 /// Providers de los repositorios.
 ///
@@ -17,7 +17,7 @@ final authRepositoryProvider = Provider<AuthRepository>(
 );
 
 final expensesRepositoryProvider = Provider<ExpensesRepository>(
-  (ref) => FakeExpensesRepository(),
+  (ref) => FirestoreExpensesRepositoryImpl(),
 );
 
 final categoriesRepositoryProvider = Provider<CategoriesRepository>(

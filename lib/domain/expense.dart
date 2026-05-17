@@ -97,6 +97,44 @@ class Expense extends Equatable {
         createdAt,
         updatedAt,
       ];
+<<<<<<< HEAD
+=======
+  
+  /// Serializa la instancia a un Map para Firestore
+  Map<String, dynamic> toJson() {
+    return {
+      'userId': userId,
+      'name': name,
+      'categoryId': categoryId,
+      'amountArs': amountArs,
+      if (originalAmount != null) 'originalAmount': originalAmount,
+      'currency': currency.name,
+      if (dolarType != null) 'dolarType': dolarType,
+      'date': date.toIso8601String(),
+      if (attachmentUrl != null) 'attachmentUrl': attachmentUrl,
+      'createdAt': createdAt.toIso8601String(),
+      if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+    };
+  }
+
+  /// Crea una instancia desde un Map de Firestore
+  factory Expense.fromJson(Map<String, dynamic> json) {
+    return Expense(
+      id: json['id'] as String?,
+      userId: json['userId'] as String,
+      name: json['name'] as String,
+      categoryId: json['categoryId'] as String,
+      amountArs: (json['amountArs'] as num).toDouble(),
+      originalAmount: json['originalAmount'] != null ? (json['originalAmount'] as num).toDouble() : null,
+      currency: (json['currency'] as String) == 'usd' ? Currency.usd : Currency.ars,
+      dolarType: json['dolarType'] as String?,
+      date: DateTime.parse(json['date'] as String),
+      attachmentUrl: json['attachmentUrl'] as String?,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt'] as String) : null,
+    );
+  }
+>>>>>>> 53e1994 (Migración a Firestore y mejoras de modelo)
 }
 
 extension ExpenseValidator on Expense {
