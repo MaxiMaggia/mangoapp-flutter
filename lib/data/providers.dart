@@ -5,7 +5,7 @@ import '../domain/auth_repository.dart';
 import '../domain/categories_repository.dart';
 import '../domain/expenses_repository.dart';
 import 'fake_auth_repository.dart';
-import 'fake_categories_repository.dart';
+import 'firestore_categories_repository.dart';
 
 /// Providers de los repositorios.
 ///
@@ -21,5 +21,5 @@ final expensesRepositoryProvider = Provider<ExpensesRepository>(
 );
 
 final categoriesRepositoryProvider = Provider<CategoriesRepository>(
-  (ref) => FakeCategoriesRepository(),
+  (ref) => FirestoreCategoriesRepositoryImpl(),
 );

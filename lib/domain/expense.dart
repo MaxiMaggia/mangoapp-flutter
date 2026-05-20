@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
 /// Moneda en la que se carga un gasto.
@@ -97,11 +98,8 @@ class Expense extends Equatable {
         createdAt,
         updatedAt,
       ];
-<<<<<<< HEAD
-=======
-  
-  /// Serializa la instancia a un Map para Firestore
-  Map<String, dynamic> toJson() {
+
+  Map<String, dynamic> toFirestore() {
     return {
       'userId': userId,
       'name': name,
@@ -110,31 +108,37 @@ class Expense extends Equatable {
       if (originalAmount != null) 'originalAmount': originalAmount,
       'currency': currency.name,
       if (dolarType != null) 'dolarType': dolarType,
-      'date': date.toIso8601String(),
+      'date': Timestamp.fromDate(date),
       if (attachmentUrl != null) 'attachmentUrl': attachmentUrl,
-      'createdAt': createdAt.toIso8601String(),
-      if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+      'createdAt': Timestamp.fromDate(createdAt),
+      if (updatedAt != null) 'updatedAt': Timestamp.fromDate(updatedAt!),
     };
   }
 
-  /// Crea una instancia desde un Map de Firestore
-  factory Expense.fromJson(Map<String, dynamic> json) {
+  static Expense fromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> snapshot,
+    SnapshotOptions? options,
+  ) {
+    final data = snapshot.data()!;
     return Expense(
-      id: json['id'] as String?,
-      userId: json['userId'] as String,
-      name: json['name'] as String,
-      categoryId: json['categoryId'] as String,
-      amountArs: (json['amountArs'] as num).toDouble(),
-      originalAmount: json['originalAmount'] != null ? (json['originalAmount'] as num).toDouble() : null,
-      currency: (json['currency'] as String) == 'usd' ? Currency.usd : Currency.ars,
-      dolarType: json['dolarType'] as String?,
-      date: DateTime.parse(json['date'] as String),
-      attachmentUrl: json['attachmentUrl'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt'] as String) : null,
+      id: snapshot.id,
+      userId: data['userId'] as String,
+      name: data['name'] as String,
+      categoryId: data['categoryId'] as String,
+      amountArs: (data['amountArs'] as num).toDouble(),
+      originalAmount: data['originalAmount'] != null
+          ? (data['originalAmount'] as num).toDouble()
+          : null,
+      currency: Currency.values.byName(data['currency'] as String),
+      dolarType: data['dolarType'] as String?,
+      date: (data['date'] as Timestamp).toDate(),
+      attachmentUrl: data['attachmentUrl'] as String?,
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      updatedAt: data['updatedAt'] != null
+          ? (data['updatedAt'] as Timestamp).toDate()
+          : null,
     );
   }
->>>>>>> 53e1994 (Migración a Firestore y mejoras de modelo)
 }
 
 extension ExpenseValidator on Expense {

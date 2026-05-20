@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/providers.dart';
@@ -10,6 +11,15 @@ class AuthNotifier extends Notifier<AuthState> {
 
   @override
   AuthState build() {
+    final sub =
+        fb_auth.FirebaseAuth.instance.authStateChanges().listen((fbUser) {
+      if (fbUser == null) {
+        state = state.copyWith(clearUser: true);
+      } else {
+        state = state.copyWith(user: _authRepo.currentUser);
+      }
+    });
+    ref.onDispose(sub.cancel);
     return AuthState(user: _authRepo.currentUser);
   }
 

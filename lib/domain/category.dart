@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 
@@ -44,6 +45,31 @@ class Category extends Equatable {
   @override
   List<Object?> get props =>
       [id, userId, title, iconKey, colorValue, createdAt];
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'userId': userId,
+      'title': title,
+      'iconKey': iconKey,
+      'colorValue': colorValue,
+      'createdAt': Timestamp.fromDate(createdAt),
+    };
+  }
+
+  static Category fromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> snapshot,
+    SnapshotOptions? options,
+  ) {
+    final data = snapshot.data()!;
+    return Category(
+      id: snapshot.id,
+      userId: data['userId'] as String,
+      title: data['title'] as String,
+      iconKey: data['iconKey'] as String,
+      colorValue: data['colorValue'] as int,
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+    );
+  }
 }
 
 extension CategoryValidator on Category {
