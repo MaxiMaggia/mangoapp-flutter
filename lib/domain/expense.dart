@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
+import 'entity_status.dart';
+
 /// Moneda en la que se carga un gasto.
 enum Currency { ars, usd }
 
@@ -38,6 +40,7 @@ class Expense extends Equatable {
   final String? attachmentUrl;
   final DateTime createdAt;
   final DateTime? updatedAt;
+  final EntityStatus status;
 
   Expense({
     this.id,
@@ -52,6 +55,7 @@ class Expense extends Equatable {
     this.attachmentUrl,
     DateTime? createdAt,
     this.updatedAt,
+    this.status = EntityStatus.available,
   }) : createdAt = createdAt ?? DateTime.now();
 
   Expense copyWith({
@@ -67,6 +71,7 @@ class Expense extends Equatable {
     String? attachmentUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
+    EntityStatus? status,
   }) =>
       Expense(
         id: id ?? this.id,
@@ -81,6 +86,7 @@ class Expense extends Equatable {
         attachmentUrl: attachmentUrl ?? this.attachmentUrl,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
+        status: status ?? this.status,
       );
 
   @override
@@ -97,6 +103,7 @@ class Expense extends Equatable {
         attachmentUrl,
         createdAt,
         updatedAt,
+        status,
       ];
 
   Map<String, dynamic> toFirestore() {
@@ -112,6 +119,7 @@ class Expense extends Equatable {
       if (attachmentUrl != null) 'attachmentUrl': attachmentUrl,
       'createdAt': Timestamp.fromDate(createdAt),
       if (updatedAt != null) 'updatedAt': Timestamp.fromDate(updatedAt!),
+      'status': status.name,
     };
   }
 
@@ -137,6 +145,9 @@ class Expense extends Equatable {
       updatedAt: data['updatedAt'] != null
           ? (data['updatedAt'] as Timestamp).toDate()
           : null,
+      status: EntityStatus.values.byName(
+        (data['status'] as String?) ?? EntityStatus.available.name,
+      ),
     );
   }
 }

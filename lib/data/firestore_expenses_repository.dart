@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../domain/entity_status.dart';
 import '../domain/expense.dart';
 import '../domain/expenses_repository.dart';
 
@@ -20,6 +21,7 @@ class FirestoreExpensesRepositoryImpl implements ExpensesRepository {
   }) async {
     Query<Expense> query = _col
         .where('userId', isEqualTo: userId)
+        .where('status', isEqualTo: EntityStatus.available.name)
         .orderBy('createdAt', descending: true)
         .limit(limit);
     if (lastCreatedAt != null) {
@@ -33,7 +35,9 @@ class FirestoreExpensesRepositoryImpl implements ExpensesRepository {
   Future<Expense?> getExpenseById(String id) async {
     final doc = await _col.doc(id).get();
     if (!doc.exists) return null;
-    return doc.data();
+    final expense = doc.data();
+    if (expense == null || expense.status == EntityStatus.deleted) return null;
+    return expense;
   }
 
   @override
@@ -45,12 +49,16 @@ class FirestoreExpensesRepositoryImpl implements ExpensesRepository {
 
   @override
   Future<void> updateExpense(Expense expense) async {
-    await _col.doc(expense.id).update(expense.toFirestore());
+    final updated = expense.copyWith(updatedAt: DateTime.now());
+    await _col.doc(updated.id).set(updated);
   }
 
   @override
   Future<void> deleteExpenseById(String id) async {
-    await _col.doc(id).delete();
+    await _col.doc(id).update({
+      'status': EntityStatus.deleted.name,
+      'updatedAt': Timestamp.now(),
+    });
   }
 
   @override
@@ -61,6 +69,7 @@ class FirestoreExpensesRepositoryImpl implements ExpensesRepository {
   }) async {
     final snapshot = await _col
         .where('userId', isEqualTo: userId)
+        .where('status', isEqualTo: EntityStatus.available.name)
         .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(from))
         .where('date', isLessThanOrEqualTo: Timestamp.fromDate(to))
         .get();

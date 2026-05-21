@@ -13,7 +13,6 @@ class ExpensesListNotifier extends Notifier<ExpensesListState> {
   @override
   ExpensesListState build() => const ExpensesListState();
 
-  /// Carga inicial. Reemplaza la lista.
   Future<void> fetchInitial(String userId) async {
     state = state.copyWith(screenState: const BaseScreenState.loading());
     try {

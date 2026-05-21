@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../domain/categories_repository.dart';
 import '../domain/category.dart';
+import '../domain/entity_status.dart';
 
 class FirestoreCategoriesRepositoryImpl implements CategoriesRepository {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -16,6 +17,7 @@ class FirestoreCategoriesRepositoryImpl implements CategoriesRepository {
   Future<List<Category>> getAllCategories(String userId) async {
     final snapshot = await _col
         .where('userId', isEqualTo: userId)
+        .where('status', isEqualTo: EntityStatus.available.name)
         .orderBy('title')
         .get();
     return snapshot.docs.map((doc) => doc.data()).toList();
@@ -25,7 +27,11 @@ class FirestoreCategoriesRepositoryImpl implements CategoriesRepository {
   Future<Category?> getCategoryById(String id) async {
     final doc = await _col.doc(id).get();
     if (!doc.exists) return null;
-    return doc.data();
+    final category = doc.data();
+    if (category == null || category.status == EntityStatus.deleted) {
+      return null;
+    }
+    return category;
   }
 
   @override
@@ -37,11 +43,15 @@ class FirestoreCategoriesRepositoryImpl implements CategoriesRepository {
 
   @override
   Future<void> updateCategory(Category category) async {
-    await _col.doc(category.id).update(category.toFirestore());
+    final updated = category.copyWith(updatedAt: DateTime.now());
+    await _col.doc(updated.id).set(updated);
   }
 
   @override
   Future<void> deleteCategoryById(String id) async {
-    await _col.doc(id).delete();
+    await _col.doc(id).update({
+      'status': EntityStatus.deleted.name,
+      'updatedAt': Timestamp.now(),
+    });
   }
 }

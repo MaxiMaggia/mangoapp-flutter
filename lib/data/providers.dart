@@ -4,7 +4,7 @@ import 'package:mango/data/firestore_expenses_repository.dart';
 import '../domain/auth_repository.dart';
 import '../domain/categories_repository.dart';
 import '../domain/expenses_repository.dart';
-import 'fake_auth_repository.dart';
+import 'firebase_auth_repository.dart';
 import 'firestore_categories_repository.dart';
 
 /// Providers de los repositorios.
@@ -13,7 +13,7 @@ import 'firestore_categories_repository.dart';
 /// real (FirebaseAuthRepositoryImpl, FirestoreExpensesRepositoryImpl, etc.)
 /// y nada mas tiene que cambiar en el resto del codigo.
 final authRepositoryProvider = Provider<AuthRepository>(
-  (ref) => FakeAuthRepository(),
+  (ref) => FirebaseAuthRepositoryImpl(), // FakeAuthRepository(),
 );
 
 final expensesRepositoryProvider = Provider<ExpensesRepository>(

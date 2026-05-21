@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 
+import 'entity_status.dart';
+
 /// Una categoria de gasto del usuario.
 ///
 /// `iconKey` referencia un icono predefinido en CategoryIcons.
@@ -13,6 +15,8 @@ class Category extends Equatable {
   final String iconKey;
   final int colorValue;
   final DateTime createdAt;
+  final DateTime? updatedAt;
+  final EntityStatus status;
 
   Category({
     this.id,
@@ -21,6 +25,8 @@ class Category extends Equatable {
     required this.iconKey,
     required this.colorValue,
     DateTime? createdAt,
+    this.updatedAt,
+    this.status = EntityStatus.available,
   }) : createdAt = createdAt ?? DateTime.now();
 
   Color get color => Color(colorValue);
@@ -32,6 +38,8 @@ class Category extends Equatable {
     String? iconKey,
     int? colorValue,
     DateTime? createdAt,
+    DateTime? updatedAt,
+    EntityStatus? status,
   }) =>
       Category(
         id: id ?? this.id,
@@ -40,11 +48,21 @@ class Category extends Equatable {
         iconKey: iconKey ?? this.iconKey,
         colorValue: colorValue ?? this.colorValue,
         createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        status: status ?? this.status,
       );
 
   @override
-  List<Object?> get props =>
-      [id, userId, title, iconKey, colorValue, createdAt];
+  List<Object?> get props => [
+        id,
+        userId,
+        title,
+        iconKey,
+        colorValue,
+        createdAt,
+        updatedAt,
+        status,
+      ];
 
   Map<String, dynamic> toFirestore() {
     return {
@@ -53,6 +71,8 @@ class Category extends Equatable {
       'iconKey': iconKey,
       'colorValue': colorValue,
       'createdAt': Timestamp.fromDate(createdAt),
+      if (updatedAt != null) 'updatedAt': Timestamp.fromDate(updatedAt!),
+      'status': status.name,
     };
   }
 
@@ -68,6 +88,12 @@ class Category extends Equatable {
       iconKey: data['iconKey'] as String,
       colorValue: data['colorValue'] as int,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
+      updatedAt: data['updatedAt'] != null
+          ? (data['updatedAt'] as Timestamp).toDate()
+          : null,
+      status: EntityStatus.values.byName(
+        (data['status'] as String?) ?? EntityStatus.available.name,
+      ),
     );
   }
 }
