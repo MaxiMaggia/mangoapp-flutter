@@ -6,4 +6,5 @@ abstract interface class CategoriesRepository {
   Future<Category> insertCategory(Category category);
   Future<void> updateCategory(Category category);
   Future<void> deleteCategoryById(String id);
+  Future<void> seedDefaultCategories(String userId);
 }

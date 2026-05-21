@@ -100,4 +100,53 @@ class FakeCategoriesRepository implements CategoriesRepository {
     await Future.delayed(const Duration(milliseconds: 400));
     _categories.removeWhere((c) => c.id == id);
   }
+
+  @override
+  Future<void> seedDefaultCategories(String userId) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    final now = DateTime.now();
+    final defaults = [
+      Category(
+        id: 'c_${_nextId++}',
+        userId: userId,
+        title: 'Comida',
+        iconKey: 'food',
+        colorValue: 0xFFEF4444,
+        createdAt: now,
+      ),
+      Category(
+        id: 'c_${_nextId++}',
+        userId: userId,
+        title: 'Transporte',
+        iconKey: 'transport',
+        colorValue: 0xFF3B82F6,
+        createdAt: now,
+      ),
+      Category(
+        id: 'c_${_nextId++}',
+        userId: userId,
+        title: 'Entretenimiento',
+        iconKey: 'entertainment',
+        colorValue: 0xFFA855F7,
+        createdAt: now,
+      ),
+      Category(
+        id: 'c_${_nextId++}',
+        userId: userId,
+        title: 'Hogar',
+        iconKey: 'home',
+        colorValue: 0xFF10B981,
+        createdAt: now,
+      ),
+      Category(
+        id: 'c_${_nextId++}',
+        userId: userId,
+        title: 'Salud',
+        iconKey: 'health',
+        colorValue: 0xFF14B8A6,
+        createdAt: now,
+      ),
+    ];
+    _categories.addAll(defaults);
+  }
 }

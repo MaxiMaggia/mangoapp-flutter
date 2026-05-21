@@ -13,7 +13,9 @@ import 'firestore_categories_repository.dart';
 /// real (FirebaseAuthRepositoryImpl, FirestoreExpensesRepositoryImpl, etc.)
 /// y nada mas tiene que cambiar en el resto del codigo.
 final authRepositoryProvider = Provider<AuthRepository>(
-  (ref) => FirebaseAuthRepositoryImpl(), // FakeAuthRepository(),
+  (ref) => FirebaseAuthRepositoryImpl(
+    ref.read(categoriesRepositoryProvider),
+  ),
 );
 
 final expensesRepositoryProvider = Provider<ExpensesRepository>(

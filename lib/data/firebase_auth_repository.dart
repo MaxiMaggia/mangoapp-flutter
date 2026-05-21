@@ -2,9 +2,13 @@ import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 
 import '../domain/app_user.dart';
 import '../domain/auth_repository.dart';
+import '../domain/categories_repository.dart';
 
 class FirebaseAuthRepositoryImpl implements AuthRepository {
   final fb_auth.FirebaseAuth _auth = fb_auth.FirebaseAuth.instance;
+  final CategoriesRepository _categoriesRepo;
+
+  FirebaseAuthRepositoryImpl(this._categoriesRepo);
 
   AppUser _mapUser(fb_auth.User user) => AppUser(
         id: user.uid,
@@ -59,6 +63,12 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
       );
       await credential.user!.updateDisplayName(displayName);
       await credential.user!.reload();
+      try {
+        await _categoriesRepo.seedDefaultCategories(_auth.currentUser!.uid);
+      } catch (e) {
+        // ignore: avoid_print
+        print('Warning: no se pudo crear el seed de categorías: $e');
+      }
       return _mapUser(_auth.currentUser!);
     } on fb_auth.FirebaseAuthException catch (e) {
       switch (e.code) {

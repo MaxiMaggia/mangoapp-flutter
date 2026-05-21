@@ -54,4 +54,52 @@ class FirestoreCategoriesRepositoryImpl implements CategoriesRepository {
       'updatedAt': Timestamp.now(),
     });
   }
+
+  @override
+  Future<void> seedDefaultCategories(String userId) async {
+    final batch = _db.batch();
+    final now = DateTime.now();
+    final defaults = [
+      Category(
+        userId: userId,
+        title: 'Comida',
+        iconKey: 'food',
+        colorValue: 0xFFEF4444,
+        createdAt: now,
+      ),
+      Category(
+        userId: userId,
+        title: 'Transporte',
+        iconKey: 'transport',
+        colorValue: 0xFF3B82F6,
+        createdAt: now,
+      ),
+      Category(
+        userId: userId,
+        title: 'Entretenimiento',
+        iconKey: 'entertainment',
+        colorValue: 0xFFA855F7,
+        createdAt: now,
+      ),
+      Category(
+        userId: userId,
+        title: 'Hogar',
+        iconKey: 'home',
+        colorValue: 0xFF10B981,
+        createdAt: now,
+      ),
+      Category(
+        userId: userId,
+        title: 'Salud',
+        iconKey: 'health',
+        colorValue: 0xFF14B8A6,
+        createdAt: now,
+      ),
+    ];
+    for (final cat in defaults) {
+      final ref = _col.doc();
+      batch.set(ref, cat);
+    }
+    await batch.commit();
+  }
 }
