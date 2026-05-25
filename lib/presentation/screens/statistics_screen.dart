@@ -28,20 +28,6 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
     });
   }
 
-  void _pickMonth() async {
-    final state = ref.read(statisticsViewModelProvider);
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: state.selectedMonth,
-      firstDate: DateTime(DateTime.now().year - 5),
-      lastDate: DateTime.now(),
-      helpText: 'Mes',
-    );
-    if (picked != null) {
-      ref.read(statisticsViewModelProvider.notifier).selectMonth(picked);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(statisticsViewModelProvider);
@@ -64,30 +50,27 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
               _MonthHeader(
-                month: state.selectedMonth,
-                total: state.monthTotal,
-                onPickMonth: _pickMonth,
+                periodStart: state.periodStart,
+                periodEnd: state.periodEnd,
+                total: state.periodTotal,
               ),
               const SizedBox(height: 16),
               _SectionTitle(
-                  text: 'Distribucion por categoria (${Fmt.monthLabel(state.selectedMonth)})'),
+                text:
+                    'Distribucion por categoria (${Fmt.shortDate(state.periodStart)} - ${Fmt.shortDate(state.periodEnd)})',
+              ),
               const SizedBox(height: 12),
               if (state.pieSlices.isEmpty)
-                const _EmptyChart(message: 'No hay gastos en este mes')
+                const _EmptyChart(
+                  message: 'No hay gastos en los ultimos 30 dias',
+                )
               else
                 _PieChartCard(
                   slices: state.pieSlices,
-                  monthTotal: state.monthTotal,
+                  periodTotal: state.periodTotal,
                   touchedIndex: _touchedPieIndex,
                   onTouch: (i) => setState(() => _touchedPieIndex = i),
                 ),
-              const SizedBox(height: 24),
-              _SectionTitle(text: 'Ultimos 4 trimestres'),
-              const SizedBox(height: 12),
-              if (state.bars.isEmpty)
-                const _EmptyChart(message: 'No hay datos suficientes')
-              else
-                _BarsChartCard(bars: state.bars),
             ],
           ),
         ),
@@ -97,13 +80,16 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
 }
 
 // -----------------------------------------------------------------------------
-// Header con el total y selector de mes
+// Header con el total y el rango activo
 class _MonthHeader extends StatelessWidget {
-  final DateTime month;
+  final DateTime periodStart;
+  final DateTime periodEnd;
   final double total;
-  final VoidCallback onPickMonth;
-  const _MonthHeader(
-      {required this.month, required this.total, required this.onPickMonth});
+  const _MonthHeader({
+    required this.periodStart,
+    required this.periodEnd,
+    required this.total,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -124,36 +110,32 @@ class _MonthHeader extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Total del mes',
+                'Total ultimos 30 dias',
                 style: TextStyle(
                     color: Colors.white, fontWeight: FontWeight.w600),
               ),
-              InkWell(
-                onTap: onPickMonth,
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.25),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.calendar_today,
-                          size: 14, color: Colors.white),
-                      const SizedBox(width: 6),
-                      Text(
-                        Fmt.monthLabel(month),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.25),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.calendar_today,
+                        size: 14, color: Colors.white),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${Fmt.shortDate(periodStart)} - ${Fmt.shortDate(periodEnd)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -216,13 +198,13 @@ class _EmptyChart extends StatelessWidget {
 // Pie chart
 class _PieChartCard extends StatelessWidget {
   final List<CategorySlice> slices;
-  final double monthTotal;
+  final double periodTotal;
   final int touchedIndex;
   final ValueChanged<int> onTouch;
 
   const _PieChartCard({
     required this.slices,
-    required this.monthTotal,
+    required this.periodTotal,
     required this.touchedIndex,
     required this.onTouch,
   });
@@ -257,8 +239,9 @@ class _PieChartCard extends StatelessWidget {
                   final slice = slices[i];
                   final isTouched = i == touchedIndex;
                   final radius = isTouched ? 78.0 : 70.0;
-                  final percent =
-                      monthTotal == 0 ? 0.0 : (slice.total / monthTotal) * 100;
+                  final percent = periodTotal == 0
+                      ? 0.0
+                      : (slice.total / periodTotal) * 100;
                   return PieChartSectionData(
                     color: slice.category.color,
                     value: slice.total,
@@ -277,14 +260,13 @@ class _PieChartCard extends StatelessWidget {
           const SizedBox(height: 16),
           ...slices.map((s) => _LegendRow(
                 slice: s,
-                percent: monthTotal == 0 ? 0 : (s.total / monthTotal) * 100,
+                percent: periodTotal == 0 ? 0 : (s.total / periodTotal) * 100,
               )),
         ],
       ),
     );
   }
 }
-
 class _LegendRow extends StatelessWidget {
   final CategorySlice slice;
   final double percent;
@@ -327,103 +309,6 @@ class _LegendRow extends StatelessWidget {
           Text(Fmt.money(slice.total),
               style: const TextStyle(fontWeight: FontWeight.w700)),
         ],
-      ),
-    );
-  }
-}
-
-// -----------------------------------------------------------------------------
-// Bar chart trimestral
-class _BarsChartCard extends StatelessWidget {
-  final List<QuarterBar> bars;
-  const _BarsChartCard({required this.bars});
-
-  @override
-  Widget build(BuildContext context) {
-    final maxValue = bars.fold<double>(0, (m, b) => b.total > m ? b.total : m);
-    return Container(
-      height: 240,
-      padding: const EdgeInsets.fromLTRB(8, 16, 16, 12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
-      ),
-      child: BarChart(
-        BarChartData(
-          alignment: BarChartAlignment.spaceAround,
-          maxY: maxValue * 1.2,
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            getDrawingHorizontalLine: (_) => FlLine(
-              color: Colors.black.withOpacity(0.05),
-              strokeWidth: 1,
-            ),
-          ),
-          borderData: FlBorderData(show: false),
-          titlesData: FlTitlesData(
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 56,
-                getTitlesWidget: (value, _) {
-                  if (value == 0) return const SizedBox();
-                  final k = (value / 1000).toStringAsFixed(0);
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: Text(
-                      '\$${k}k',
-                      style: const TextStyle(
-                          fontSize: 11, color: AppColors.textSecondary),
-                    ),
-                  );
-                },
-              ),
-            ),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (value, _) {
-                  final i = value.toInt();
-                  if (i < 0 || i >= bars.length) return const SizedBox();
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      bars[i].label,
-                      style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w600),
-                    ),
-                  );
-                },
-              ),
-            ),
-            topTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          ),
-          barGroups: List.generate(bars.length, (i) {
-            return BarChartGroupData(
-              x: i,
-              barRods: [
-                BarChartRodData(
-                  toY: bars[i].total,
-                  width: 22,
-                  borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(8), bottom: Radius.zero),
-                  gradient: const LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [AppColors.mangoOrange, AppColors.mangoYellow],
-                  ),
-                ),
-              ],
-            );
-          }),
-        ),
       ),
     );
   }

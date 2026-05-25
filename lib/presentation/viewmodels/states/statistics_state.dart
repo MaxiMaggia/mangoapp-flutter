@@ -3,8 +3,7 @@ import 'package:equatable/equatable.dart';
 import '../../../domain/category.dart';
 import '../../utils/base_screen_state.dart';
 
-/// Una porcion del grafico de torta (un mes) o una barra del grafico
-/// trimestral / anual.
+/// Una porcion del grafico de torta para el periodo estadistico.
 class CategorySlice extends Equatable {
   final Category category;
   final double total;
@@ -15,57 +14,39 @@ class CategorySlice extends Equatable {
   List<Object?> get props => [category, total];
 }
 
-class QuarterBar extends Equatable {
-  final int year;
-  final int quarter; // 1..4
-  final double total;
-  const QuarterBar(
-      {required this.year, required this.quarter, required this.total});
-
-  String get label => 'Q$quarter $year';
-
-  @override
-  List<Object?> get props => [year, quarter, total];
-}
-
-enum StatsRange { month, quarter, year }
-
 class StatisticsState extends Equatable {
   final BaseScreenState screenState;
-  final DateTime selectedMonth; // mes a graficar en torta
+  final DateTime periodStart;
+  final DateTime periodEnd;
   final List<CategorySlice> pieSlices;
-  final List<QuarterBar> bars;
-  final StatsRange barRange;
-  final double monthTotal;
+  final double periodTotal;
 
   StatisticsState({
     this.screenState = const BaseScreenState.idle(),
-    DateTime? selectedMonth,
+    DateTime? periodStart,
+    DateTime? periodEnd,
     this.pieSlices = const [],
-    this.bars = const [],
-    this.barRange = StatsRange.year,
-    this.monthTotal = 0,
-  }) : selectedMonth =
-            selectedMonth ?? DateTime(DateTime.now().year, DateTime.now().month);
+    this.periodTotal = 0,
+  })  : periodEnd = periodEnd ?? DateTime.now(),
+        periodStart =
+            periodStart ?? DateTime.now().subtract(const Duration(days: 30));
 
   StatisticsState copyWith({
     BaseScreenState? screenState,
-    DateTime? selectedMonth,
+    DateTime? periodStart,
+    DateTime? periodEnd,
     List<CategorySlice>? pieSlices,
-    List<QuarterBar>? bars,
-    StatsRange? barRange,
-    double? monthTotal,
+    double? periodTotal,
   }) =>
       StatisticsState(
         screenState: screenState ?? this.screenState,
-        selectedMonth: selectedMonth ?? this.selectedMonth,
+        periodStart: periodStart ?? this.periodStart,
+        periodEnd: periodEnd ?? this.periodEnd,
         pieSlices: pieSlices ?? this.pieSlices,
-        bars: bars ?? this.bars,
-        barRange: barRange ?? this.barRange,
-        monthTotal: monthTotal ?? this.monthTotal,
+        periodTotal: periodTotal ?? this.periodTotal,
       );
 
   @override
   List<Object?> get props =>
-      [screenState, selectedMonth, pieSlices, bars, barRange, monthTotal];
+      [screenState, periodStart, periodEnd, pieSlices, periodTotal];
 }
