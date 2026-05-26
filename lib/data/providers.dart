@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/auth_repository.dart';
 import '../domain/categories_repository.dart';
 import '../domain/expenses_repository.dart';
-import 'fake_auth_repository.dart';
-import 'fake_categories_repository.dart';
-import 'fake_expenses_repository.dart';
+import 'firebase_auth_repository.dart';
+import 'firestore_categories_repository.dart';
+import 'firestore_expenses_repository.dart';
 
 /// Providers de los repositorios.
 ///
@@ -13,13 +13,13 @@ import 'fake_expenses_repository.dart';
 /// real (FirebaseAuthRepositoryImpl, FirestoreExpensesRepositoryImpl, etc.)
 /// y nada mas tiene que cambiar en el resto del codigo.
 final authRepositoryProvider = Provider<AuthRepository>(
-  (ref) => FakeAuthRepository(),
+  (ref) => FirebaseAuthRepositoryImpl(),
 );
 
 final expensesRepositoryProvider = Provider<ExpensesRepository>(
-  (ref) => FakeExpensesRepository(),
+  (ref) => FirestoreExpensesRepositoryImpl(),
 );
 
 final categoriesRepositoryProvider = Provider<CategoriesRepository>(
-  (ref) => FakeCategoriesRepository(),
+  (ref) => FirestoreCategoriesRepositoryImpl(),
 );

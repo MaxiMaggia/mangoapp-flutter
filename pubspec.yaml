@@ -31,10 +31,10 @@ dependencies:
   # Charts
   fl_chart: ^0.66.2
 
-  # ===== Las siguientes se descomentan en la fase de integración con Firebase =====
-  # firebase_core: ^2.27.0
-  # cloud_firestore: ^4.15.8
-  # firebase_auth: ^4.17.8
+  # Firebase
+  firebase_core: ^4.7.0
+  cloud_firestore: ^6.3.0
+  firebase_auth: ^6.4.0
 
 dev_dependencies:
   flutter_test:
