@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../domain/app_user.dart';
 import '../domain/auth_repository.dart';
 
@@ -5,6 +7,7 @@ import '../domain/auth_repository.dart';
 /// cuando se integre Firebase Auth.
 class FakeAuthRepository implements AuthRepository {
   AppUser? _current;
+  final _authStateController = StreamController<AppUser?>.broadcast();
 
   // Algunos usuarios de prueba para poder loguearse.
   // En la version Firebase esto desaparece.
@@ -23,6 +26,9 @@ class FakeAuthRepository implements AuthRepository {
   AppUser? get currentUser => _current;
 
   @override
+  Stream<AppUser?> get authStateChanges => _authStateController.stream;
+
+  @override
   Future<AppUser> signIn({
     required String email,
     required String password,
@@ -36,6 +42,7 @@ class FakeAuthRepository implements AuthRepository {
       throw Exception('La contrasena es incorrecta.');
     }
     _current = stored.user;
+    _authStateController.add(_current);
     return stored.user;
   }
 
@@ -57,6 +64,7 @@ class FakeAuthRepository implements AuthRepository {
     );
     _users[normalizedEmail] = _StoredUser(user: newUser, password: password);
     _current = newUser;
+    _authStateController.add(_current);
     return newUser;
   }
 
@@ -64,6 +72,7 @@ class FakeAuthRepository implements AuthRepository {
   Future<void> signOut() async {
     await Future.delayed(const Duration(milliseconds: 200));
     _current = null;
+    _authStateController.add(null);
   }
 }
 

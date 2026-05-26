@@ -1,25 +1,27 @@
-import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/providers.dart';
+import '../../../domain/app_user.dart';
 import '../../../domain/auth_repository.dart';
 import '../../utils/base_screen_state.dart';
 import '../states/auth_state.dart';
 
 class AuthNotifier extends Notifier<AuthState> {
   late final AuthRepository _authRepo = ref.read(authRepositoryProvider);
+  StreamSubscription<AppUser?>? _authSub;
 
   @override
   AuthState build() {
-    final sub =
-        fb_auth.FirebaseAuth.instance.authStateChanges().listen((fbUser) {
-      if (fbUser == null) {
-        state = state.copyWith(clearUser: true);
-      } else {
-        state = state.copyWith(user: _authRepo.currentUser);
-      }
+    _authSub = _authRepo.authStateChanges.listen((user) {
+      state = state.copyWith(
+        screenState: const BaseScreenState.idle(),
+        user: user,
+        clearUser: user == null,
+      );
     });
-    ref.onDispose(sub.cancel);
+    ref.onDispose(() => _authSub?.cancel());
     return AuthState(user: _authRepo.currentUser);
   }
 

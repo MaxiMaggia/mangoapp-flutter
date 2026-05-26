@@ -1,27 +1,28 @@
-import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 import '../domain/app_user.dart';
 import '../domain/auth_repository.dart';
 import '../domain/categories_repository.dart';
 
 class FirebaseAuthRepositoryImpl implements AuthRepository {
-  final fb_auth.FirebaseAuth _auth = fb_auth.FirebaseAuth.instance;
+  FirebaseAuthRepositoryImpl(
+    this._categoriesRepo, {
+    firebase_auth.FirebaseAuth? auth,
+    FirebaseFirestore? firestore,
+  })  : _auth = auth ?? firebase_auth.FirebaseAuth.instance,
+        _firestore = firestore ?? FirebaseFirestore.instance;
+
   final CategoriesRepository _categoriesRepo;
-
-  FirebaseAuthRepositoryImpl(this._categoriesRepo);
-
-  AppUser _mapUser(fb_auth.User user) => AppUser(
-        id: user.uid,
-        email: user.email ?? '',
-        displayName: user.displayName ?? '',
-      );
+  final firebase_auth.FirebaseAuth _auth;
+  final FirebaseFirestore _firestore;
 
   @override
-  AppUser? get currentUser {
-    final user = _auth.currentUser;
-    if (user == null) return null;
-    return _mapUser(user);
-  }
+  AppUser? get currentUser => _auth.currentUser?.toAppUser();
+
+  @override
+  Stream<AppUser?> get authStateChanges =>
+      _auth.authStateChanges().map((user) => user?.toAppUser());
 
   @override
   Future<AppUser> signIn({
@@ -30,23 +31,14 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
   }) async {
     try {
       final credential = await _auth.signInWithEmailAndPassword(
-        email: email,
+        email: email.trim(),
         password: password,
       );
-      return _mapUser(credential.user!);
-    } on fb_auth.FirebaseAuthException catch (e) {
-      switch (e.code) {
-        case 'user-not-found':
-        case 'invalid-email':
-          throw Exception('No existe una cuenta con ese email.');
-        case 'wrong-password':
-        case 'invalid-credential':
-          throw Exception('La contraseña es incorrecta.');
-        case 'too-many-requests':
-          throw Exception('Demasiados intentos. Probá más tarde.');
-        default:
-          throw Exception('Error al iniciar sesión: ${e.message}');
-      }
+      final user = credential.user;
+      if (user == null) throw Exception('No se pudo iniciar sesion.');
+      return user.toAppUser();
+    } on firebase_auth.FirebaseAuthException catch (error) {
+      throw Exception(_authMessage(error));
     }
   }
 
@@ -58,34 +50,63 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
   }) async {
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
-        email: email,
+        email: email.trim(),
         password: password,
       );
-      await credential.user!.updateDisplayName(displayName);
-      await credential.user!.reload();
-      try {
-        await _categoriesRepo.seedDefaultCategories(_auth.currentUser!.uid);
-      } catch (e) {
-        // ignore: avoid_print
-        print('Warning: no se pudo crear el seed de categorías: $e');
-      }
-      return _mapUser(_auth.currentUser!);
-    } on fb_auth.FirebaseAuthException catch (e) {
-      switch (e.code) {
-        case 'email-already-in-use':
-          throw Exception('Ya existe una cuenta con ese email.');
-        case 'weak-password':
-          throw Exception('La contraseña es muy débil (mínimo 6 caracteres).');
-        case 'invalid-email':
-          throw Exception('El email no es válido.');
-        default:
-          throw Exception('Error al crear la cuenta: ${e.message}');
-      }
+      final user = credential.user;
+      if (user == null) throw Exception('No se pudo crear la cuenta.');
+
+      await user.updateDisplayName(displayName.trim());
+      await user.reload();
+      final refreshedUser = _auth.currentUser ?? user;
+      final appUser = refreshedUser.toAppUser(displayNameFallback: displayName);
+
+      await _firestore.collection('users').doc(appUser.id).set({
+        'email': appUser.email,
+        'displayName': appUser.displayName,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      await _categoriesRepo.seedDefaultCategories(appUser.id);
+
+      return appUser;
+    } on firebase_auth.FirebaseAuthException catch (error) {
+      throw Exception(_authMessage(error));
     }
   }
 
   @override
-  Future<void> signOut() async {
-    await _auth.signOut();
+  Future<void> signOut() => _auth.signOut();
+
+  String _authMessage(firebase_auth.FirebaseAuthException error) {
+    switch (error.code) {
+      case 'email-already-in-use':
+        return 'Ya existe una cuenta con ese email.';
+      case 'invalid-email':
+        return 'El email no es valido.';
+      case 'user-not-found':
+      case 'wrong-password':
+      case 'invalid-credential':
+        return 'Email o contrasena incorrectos.';
+      case 'weak-password':
+        return 'La contrasena es demasiado debil.';
+      case 'network-request-failed':
+        return 'No se pudo conectar con Firebase.';
+      default:
+        return error.message ?? 'Error de autenticacion.';
+    }
   }
+}
+
+extension on firebase_auth.User {
+  AppUser toAppUser({String? displayNameFallback}) => AppUser(
+        id: uid,
+        email: email ?? '',
+        displayName: displayName?.trim().isNotEmpty == true
+            ? displayName!.trim()
+            : (displayNameFallback?.trim().isNotEmpty == true
+                ? displayNameFallback!.trim()
+                : (email ?? 'Usuario')),
+      );
 }

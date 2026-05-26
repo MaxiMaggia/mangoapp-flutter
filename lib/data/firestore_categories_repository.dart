@@ -1,31 +1,38 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../domain/categories_repository.dart';
 import '../domain/category.dart';
 import '../domain/entity_status.dart';
 
 class FirestoreCategoriesRepositoryImpl implements CategoriesRepository {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  FirestoreCategoriesRepositoryImpl({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  late final CollectionReference<Category> _col = _db
-      .collection('categories')
-      .withConverter<Category>(
-        fromFirestore: Category.fromFirestore,
-        toFirestore: (category, _) => category.toFirestore(),
-      );
+  final FirebaseFirestore _firestore;
+
+  CollectionReference<Category> get _collection =>
+      _firestore.collection('categories').withConverter<Category>(
+            fromFirestore: Category.fromFirestore,
+            toFirestore: (category, _) => {
+              ...category.toFirestore(),
+              'titleLower': category.title.trim().toLowerCase(),
+            },
+          );
 
   @override
   Future<List<Category>> getAllCategories(String userId) async {
-    final snapshot = await _col
+    final snapshot = await _collection
         .where('userId', isEqualTo: userId)
         .where('status', isEqualTo: EntityStatus.available.name)
-        .orderBy('title')
+        .orderBy('titleLower')
         .get();
+
     return snapshot.docs.map((doc) => doc.data()).toList();
   }
 
   @override
   Future<Category?> getCategoryById(String id) async {
-    final doc = await _col.doc(id).get();
+    final doc = await _collection.doc(id).get();
     if (!doc.exists) return null;
     final category = doc.data();
     if (category == null || category.status == EntityStatus.deleted) {
@@ -36,20 +43,23 @@ class FirestoreCategoriesRepositoryImpl implements CategoriesRepository {
 
   @override
   Future<Category> insertCategory(Category category) async {
-    final ref = await _col.add(category);
-    final doc = await ref.get();
-    return doc.data()!;
+    final doc = await _collection.add(category);
+    return category.copyWith(id: doc.id);
   }
 
   @override
   Future<void> updateCategory(Category category) async {
+    final id = category.id;
+    if (id == null || id.isEmpty) {
+      throw Exception('No se puede actualizar una categoria sin id.');
+    }
     final updated = category.copyWith(updatedAt: DateTime.now());
-    await _col.doc(updated.id).set(updated);
+    await _collection.doc(id).set(updated, SetOptions(merge: true));
   }
 
   @override
   Future<void> deleteCategoryById(String id) async {
-    await _col.doc(id).update({
+    await _collection.doc(id).update({
       'status': EntityStatus.deleted.name,
       'updatedAt': Timestamp.now(),
     });
@@ -57,7 +67,10 @@ class FirestoreCategoriesRepositoryImpl implements CategoriesRepository {
 
   @override
   Future<void> seedDefaultCategories(String userId) async {
-    final batch = _db.batch();
+    final existing = await getAllCategories(userId);
+    if (existing.isNotEmpty) return;
+
+    final batch = _firestore.batch();
     final now = DateTime.now();
     final defaults = [
       Category(
@@ -96,9 +109,10 @@ class FirestoreCategoriesRepositoryImpl implements CategoriesRepository {
         createdAt: now,
       ),
     ];
-    for (final cat in defaults) {
-      final ref = _col.doc();
-      batch.set(ref, cat);
+
+    for (final category in defaults) {
+      final ref = _collection.doc();
+      batch.set(ref, category);
     }
     await batch.commit();
   }
