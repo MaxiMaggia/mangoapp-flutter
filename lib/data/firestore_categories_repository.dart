@@ -21,13 +21,27 @@ class FirestoreCategoriesRepositoryImpl implements CategoriesRepository {
 
   @override
   Future<List<Category>> getAllCategories(String userId) async {
-    final snapshot = await _collection
-        .where('userId', isEqualTo: userId)
-        .where('status', isEqualTo: EntityStatus.available.name)
-        .orderBy('titleLower')
-        .get();
+    try {
+      final snapshot = await _collection
+          .where('userId', isEqualTo: userId)
+          .where('status', isEqualTo: EntityStatus.available.name)
+          .orderBy('titleLower')
+          .get();
 
-    return snapshot.docs.map((doc) => doc.data()).toList();
+      return snapshot.docs.map((doc) => doc.data()).toList();
+    } on FirebaseException catch (error) {
+      if (error.code != 'failed-precondition') rethrow;
+
+      final snapshot =
+          await _collection.where('userId', isEqualTo: userId).get();
+      final categories = snapshot.docs
+          .map((doc) => doc.data())
+          .where((category) => category.status == EntityStatus.available)
+          .toList()
+        ..sort((a, b) =>
+            a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+      return categories;
+    }
   }
 
   @override

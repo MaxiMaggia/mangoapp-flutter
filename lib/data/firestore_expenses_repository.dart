@@ -22,18 +22,33 @@ class FirestoreExpensesRepositoryImpl implements ExpensesRepository {
     int limit = 20,
     DateTime? lastCreatedAt,
   }) async {
-    Query<Expense> query = _collection
-        .where('userId', isEqualTo: userId)
-        .where('status', isEqualTo: EntityStatus.available.name)
-        .orderBy('createdAt', descending: true)
-        .limit(limit);
+    try {
+      Query<Expense> query = _collection
+          .where('userId', isEqualTo: userId)
+          .where('status', isEqualTo: EntityStatus.available.name)
+          .orderBy('createdAt', descending: true)
+          .limit(limit);
 
-    if (lastCreatedAt != null) {
-      query = query.startAfter([Timestamp.fromDate(lastCreatedAt)]);
+      if (lastCreatedAt != null) {
+        query = query.startAfter([Timestamp.fromDate(lastCreatedAt)]);
+      }
+
+      final snapshot = await query.get();
+      return snapshot.docs.map((doc) => doc.data()).toList();
+    } on FirebaseException catch (error) {
+      if (error.code != 'failed-precondition') rethrow;
+
+      final snapshot =
+          await _collection.where('userId', isEqualTo: userId).get();
+      final expenses = snapshot.docs
+          .map((doc) => doc.data())
+          .where((expense) => expense.status == EntityStatus.available)
+          .where((expense) =>
+              lastCreatedAt == null || expense.createdAt.isBefore(lastCreatedAt))
+          .toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return expenses.take(limit).toList();
     }
-
-    final snapshot = await query.get();
-    return snapshot.docs.map((doc) => doc.data()).toList();
   }
 
   @override
@@ -77,14 +92,29 @@ class FirestoreExpensesRepositoryImpl implements ExpensesRepository {
     required DateTime from,
     required DateTime to,
   }) async {
-    final snapshot = await _collection
-        .where('userId', isEqualTo: userId)
-        .where('status', isEqualTo: EntityStatus.available.name)
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(from))
-        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(to))
-        .orderBy('date')
-        .get();
+    try {
+      final snapshot = await _collection
+          .where('userId', isEqualTo: userId)
+          .where('status', isEqualTo: EntityStatus.available.name)
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(from))
+          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(to))
+          .orderBy('date')
+          .get();
 
-    return snapshot.docs.map((doc) => doc.data()).toList();
+      return snapshot.docs.map((doc) => doc.data()).toList();
+    } on FirebaseException catch (error) {
+      if (error.code != 'failed-precondition') rethrow;
+
+      final snapshot =
+          await _collection.where('userId', isEqualTo: userId).get();
+      final expenses = snapshot.docs
+          .map((doc) => doc.data())
+          .where((expense) => expense.status == EntityStatus.available)
+          .where((expense) =>
+              !expense.date.isBefore(from) && !expense.date.isAfter(to))
+          .toList()
+        ..sort((a, b) => a.date.compareTo(b.date));
+      return expenses;
+    }
   }
 }
