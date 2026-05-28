@@ -13,11 +13,6 @@ flutter run
 Crear un usuario desde la pantalla de registro para entrar — la auth corre
 contra Firebase, no hay usuarios de prueba.
 
-## Documentación
-
-- [`CLAUDE.md`](./CLAUDE.md) — Lineamientos completos de arquitectura, patrones
-  y reglas del proyecto. **Leer antes de modificar código.**
-- [`PROGRESS.md`](./PROGRESS.md) — Qué está hecho y qué falta.
 
 ## Stack
 
