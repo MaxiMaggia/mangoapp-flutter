@@ -28,32 +28,60 @@ class StatisticsNotifier extends Notifier<StatisticsState> {
     try {
       final categories = await _categoriesRepo.getAllCategories(user.id);
 
-      final now = DateTime.now();
-      final periodStart = DateTime(now.year, now.month, now.day)
-          .subtract(const Duration(days: 29));
-      final periodEnd = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
+      final start = DateTime(
+          state.selectedMonth.year, state.selectedMonth.month, 1);
+      final end = DateTime(
+          state.selectedMonth.year, state.selectedMonth.month + 1, 0,
+          23, 59, 59);
       final expenses = await _expensesRepo.getExpensesInRange(
         userId: user.id,
-        from: periodStart,
-        to: periodEnd,
+        from: start,
+        to: end,
       );
 
       final pieSlices = _buildPieSlices(expenses, categories);
-      final periodTotal =
+      final monthTotal =
           expenses.fold<double>(0, (sum, expense) => sum + expense.amountArs);
 
       state = state.copyWith(
         screenState: const BaseScreenState.idle(),
-        periodStart: periodStart,
-        periodEnd: periodEnd,
         pieSlices: pieSlices,
-        periodTotal: periodTotal,
+        monthTotal: monthTotal,
       );
     } catch (error) {
       state = state.copyWith(
         screenState: BaseScreenState.error(error.toString()),
       );
     }
+  }
+
+  void goToPreviousMonth() {
+    final prev = DateTime(
+        state.selectedMonth.year, state.selectedMonth.month - 1, 1);
+    state = state.copyWith(selectedMonth: prev);
+    load();
+  }
+
+  void goToNextMonth() {
+    final next = DateTime(
+        state.selectedMonth.year, state.selectedMonth.month + 1, 1);
+    final currentMonth = DateTime(DateTime.now().year, DateTime.now().month, 1);
+    if (next.isAfter(currentMonth)) return;
+    state = state.copyWith(selectedMonth: next);
+    load();
+  }
+
+  bool get canGoNext {
+    final currentMonth = DateTime(DateTime.now().year, DateTime.now().month, 1);
+    final next = DateTime(
+        state.selectedMonth.year, state.selectedMonth.month + 1, 1);
+    return !next.isAfter(currentMonth);
+  }
+
+  void selectMonth(DateTime month) {
+    final normalized = DateTime(month.year, month.month, 1);
+    state = state.copyWith(selectedMonth: normalized);
+    load();
   }
 
   List<CategorySlice> _buildPieSlices(

@@ -20,6 +20,10 @@ class DolarType {
   static const tarjeta = DolarType(code: 'tarjeta', label: 'Tarjeta');
 
   static const all = [blue, oficial, mep, tarjeta];
+
+  /// Nombre de la casa según dolarapi.com (en dolarapi el MEP se llama
+  /// "bolsa"; el resto coincide con nuestro `code`).
+  String get apiCasa => code == 'mep' ? 'bolsa' : code;
 }
 
 /// Entidad principal: un gasto registrado por el usuario.

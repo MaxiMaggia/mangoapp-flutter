@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../presentation/screens/category_form_screen.dart';
 import '../presentation/screens/category_list_screen.dart';
+import '../presentation/screens/dolar_rates_screen.dart';
 import '../presentation/screens/expense_details_screen.dart';
 import '../presentation/screens/expense_form_screen.dart';
 import '../presentation/screens/home_screen.dart';
@@ -143,6 +144,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) =>
             CategoryFormScreen(categoryId: state.pathParameters['id']),
+      ),
+      GoRoute(
+        path: '/dolar-rates',
+        name: DolarRatesScreen.name,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const DolarRatesScreen(),
       ),
     ],
   );

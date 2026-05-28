@@ -3,7 +3,7 @@ import 'package:equatable/equatable.dart';
 import '../../../domain/category.dart';
 import '../../utils/base_screen_state.dart';
 
-/// Una porcion del grafico de torta para el periodo estadistico.
+/// Una porcion del grafico de torta para el mes seleccionado.
 class CategorySlice extends Equatable {
   final Category category;
   final double total;
@@ -16,37 +16,34 @@ class CategorySlice extends Equatable {
 
 class StatisticsState extends Equatable {
   final BaseScreenState screenState;
-  final DateTime periodStart;
-  final DateTime periodEnd;
+
+  /// Primer dia del mes seleccionado (ej: DateTime(2026, 5, 1)).
+  final DateTime selectedMonth;
   final List<CategorySlice> pieSlices;
-  final double periodTotal;
+  final double monthTotal;
 
   StatisticsState({
     this.screenState = const BaseScreenState.idle(),
-    DateTime? periodStart,
-    DateTime? periodEnd,
+    DateTime? selectedMonth,
     this.pieSlices = const [],
-    this.periodTotal = 0,
-  })  : periodEnd = periodEnd ?? DateTime.now(),
-        periodStart =
-            periodStart ?? DateTime.now().subtract(const Duration(days: 30));
+    this.monthTotal = 0,
+  }) : selectedMonth = selectedMonth ??
+            DateTime(DateTime.now().year, DateTime.now().month, 1);
 
   StatisticsState copyWith({
     BaseScreenState? screenState,
-    DateTime? periodStart,
-    DateTime? periodEnd,
+    DateTime? selectedMonth,
     List<CategorySlice>? pieSlices,
-    double? periodTotal,
+    double? monthTotal,
   }) =>
       StatisticsState(
         screenState: screenState ?? this.screenState,
-        periodStart: periodStart ?? this.periodStart,
-        periodEnd: periodEnd ?? this.periodEnd,
+        selectedMonth: selectedMonth ?? this.selectedMonth,
         pieSlices: pieSlices ?? this.pieSlices,
-        periodTotal: periodTotal ?? this.periodTotal,
+        monthTotal: monthTotal ?? this.monthTotal,
       );
 
   @override
   List<Object?> get props =>
-      [screenState, periodStart, periodEnd, pieSlices, periodTotal];
+      [screenState, selectedMonth, pieSlices, monthTotal];
 }

@@ -28,6 +28,51 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
     });
   }
 
+  Future<void> _showMonthPicker(DateTime selected) async {
+    final now = DateTime.now();
+    final months = List.generate(
+      12,
+      (i) => DateTime(now.year, now.month - i, 1),
+    );
+
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: Text(
+                'Elegí un mes',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+            for (final month in months)
+              ListTile(
+                title: Text(Fmt.monthYear(month)),
+                trailing: month.year == selected.year &&
+                        month.month == selected.month
+                    ? const Icon(Icons.check, color: AppColors.mangoDeep)
+                    : null,
+                onTap: () {
+                  ref
+                      .read(statisticsViewModelProvider.notifier)
+                      .selectMonth(month);
+                  Navigator.pop(sheetContext);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(statisticsViewModelProvider);
@@ -43,52 +88,64 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
             child: Text('Error: $msg'),
           ),
         ),
-        idle: () => RefreshIndicator(
-          onRefresh: () =>
-              ref.read(statisticsViewModelProvider.notifier).load(),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
-              _MonthHeader(
-                periodStart: state.periodStart,
-                periodEnd: state.periodEnd,
-                total: state.periodTotal,
-              ),
-              const SizedBox(height: 16),
-              _SectionTitle(
-                text:
-                    'Distribucion por categoria (${Fmt.shortDate(state.periodStart)} - ${Fmt.shortDate(state.periodEnd)})',
-              ),
-              const SizedBox(height: 12),
-              if (state.pieSlices.isEmpty)
-                const _EmptyChart(
-                  message: 'No hay gastos en los ultimos 30 dias',
-                )
-              else
-                _PieChartCard(
-                  slices: state.pieSlices,
-                  periodTotal: state.periodTotal,
-                  touchedIndex: _touchedPieIndex,
-                  onTouch: (i) => setState(() => _touchedPieIndex = i),
+        idle: () {
+          final notifier = ref.read(statisticsViewModelProvider.notifier);
+          return RefreshIndicator(
+            onRefresh: () => notifier.load(),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              children: [
+                _MonthHeader(
+                  selectedMonth: state.selectedMonth,
+                  total: state.monthTotal,
+                  canGoNext: notifier.canGoNext,
+                  onPrev: notifier.goToPreviousMonth,
+                  onNext: notifier.goToNextMonth,
+                  onTapMonth: () => _showMonthPicker(state.selectedMonth),
                 ),
-            ],
-          ),
-        ),
+                const SizedBox(height: 16),
+                _SectionTitle(
+                  text: 'Distribucion por categoria',
+                ),
+                const SizedBox(height: 12),
+                if (state.pieSlices.isEmpty)
+                  _EmptyChart(
+                    message:
+                        'No hay gastos en ${Fmt.monthYear(state.selectedMonth)}',
+                  )
+                else
+                  _PieChartCard(
+                    slices: state.pieSlices,
+                    monthTotal: state.monthTotal,
+                    touchedIndex: _touchedPieIndex,
+                    onTouch: (i) => setState(() => _touchedPieIndex = i),
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 }
 
 // -----------------------------------------------------------------------------
-// Header con el total y el rango activo
+// Header con el total y el selector de mes navegable
 class _MonthHeader extends StatelessWidget {
-  final DateTime periodStart;
-  final DateTime periodEnd;
+  final DateTime selectedMonth;
   final double total;
+  final bool canGoNext;
+  final VoidCallback onPrev;
+  final VoidCallback onNext;
+  final VoidCallback onTapMonth;
+
   const _MonthHeader({
-    required this.periodStart,
-    required this.periodEnd,
+    required this.selectedMonth,
     required this.total,
+    required this.canGoNext,
+    required this.onPrev,
+    required this.onNext,
+    required this.onTapMonth,
   });
 
   @override
@@ -109,34 +166,19 @@ class _MonthHeader extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Total ultimos 30 dias',
-                style: TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.w600),
+              Expanded(
+                child: Text(
+                  'Total de ${Fmt.monthYear(selectedMonth)}',
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w600),
+                ),
               ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.25),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.calendar_today,
-                        size: 14, color: Colors.white),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${Fmt.shortDate(periodStart)} - ${Fmt.shortDate(periodEnd)}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
+              _MonthNavigator(
+                selectedMonth: selectedMonth,
+                canGoNext: canGoNext,
+                onPrev: onPrev,
+                onNext: onNext,
+                onTapMonth: onTapMonth,
               ),
             ],
           ),
@@ -151,6 +193,88 @@ class _MonthHeader extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MonthNavigator extends StatelessWidget {
+  final DateTime selectedMonth;
+  final bool canGoNext;
+  final VoidCallback onPrev;
+  final VoidCallback onNext;
+  final VoidCallback onTapMonth;
+
+  const _MonthNavigator({
+    required this.selectedMonth,
+    required this.canGoNext,
+    required this.onPrev,
+    required this.onNext,
+    required this.onTapMonth,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _ArrowButton(icon: Icons.chevron_left, onTap: onPrev),
+        const SizedBox(width: 2),
+        InkWell(
+          onTap: onTapMonth,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.25),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.calendar_today,
+                    size: 14, color: Colors.white),
+                const SizedBox(width: 6),
+                Text(
+                  Fmt.monthYear(selectedMonth),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 2),
+        _ArrowButton(
+          icon: Icons.chevron_right,
+          onTap: canGoNext ? onNext : null,
+        ),
+      ],
+    );
+  }
+}
+
+class _ArrowButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+  const _ArrowButton({required this.icon, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.all(2),
+        child: Icon(
+          icon,
+          color: enabled ? Colors.white : Colors.white.withOpacity(0.4),
+          size: 24,
+        ),
       ),
     );
   }
@@ -198,13 +322,13 @@ class _EmptyChart extends StatelessWidget {
 // Pie chart
 class _PieChartCard extends StatelessWidget {
   final List<CategorySlice> slices;
-  final double periodTotal;
+  final double monthTotal;
   final int touchedIndex;
   final ValueChanged<int> onTouch;
 
   const _PieChartCard({
     required this.slices,
-    required this.periodTotal,
+    required this.monthTotal,
     required this.touchedIndex,
     required this.onTouch,
   });
@@ -239,9 +363,9 @@ class _PieChartCard extends StatelessWidget {
                   final slice = slices[i];
                   final isTouched = i == touchedIndex;
                   final radius = isTouched ? 78.0 : 70.0;
-                  final percent = periodTotal == 0
+                  final percent = monthTotal == 0
                       ? 0.0
-                      : (slice.total / periodTotal) * 100;
+                      : (slice.total / monthTotal) * 100;
                   return PieChartSectionData(
                     color: slice.category.color,
                     value: slice.total,
@@ -260,7 +384,7 @@ class _PieChartCard extends StatelessWidget {
           const SizedBox(height: 16),
           ...slices.map((s) => _LegendRow(
                 slice: s,
-                percent: periodTotal == 0 ? 0 : (s.total / periodTotal) * 100,
+                percent: monthTotal == 0 ? 0 : (s.total / monthTotal) * 100,
               )),
         ],
       ),

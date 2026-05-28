@@ -2,15 +2,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/auth_repository.dart';
 import '../domain/categories_repository.dart';
+import '../domain/dolar_repository.dart';
 import '../domain/expenses_repository.dart';
+import '../domain/users_repository.dart';
+import 'dolar_api_repository.dart';
 import 'firebase_auth_repository.dart';
 import 'firestore_categories_repository.dart';
 import 'firestore_expenses_repository.dart';
+import 'firestore_users_repository.dart';
 
 /// Providers de los repositorios.
 final authRepositoryProvider = Provider<AuthRepository>(
   (ref) => FirebaseAuthRepositoryImpl(
     ref.read(categoriesRepositoryProvider),
+    ref.read(usersRepositoryProvider),
+    ref.read(expensesRepositoryProvider),
   ),
 );
 
@@ -20,4 +26,12 @@ final expensesRepositoryProvider = Provider<ExpensesRepository>(
 
 final categoriesRepositoryProvider = Provider<CategoriesRepository>(
   (ref) => FirestoreCategoriesRepositoryImpl(),
+);
+
+final usersRepositoryProvider = Provider<UsersRepository>(
+  (ref) => FirestoreUsersRepositoryImpl(),
+);
+
+final dolarRepositoryProvider = Provider<DolarRepository>(
+  (ref) => DolarApiRepository(),
 );

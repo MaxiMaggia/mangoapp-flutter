@@ -64,12 +64,12 @@ lib/
 │   ├── categories_repository.dart
 │   └── auth_repository.dart
 │
-├── data/                           # IMPLEMENTACIÓN de repos. Hoy: Fakes en memoria.
-│   ├── fake_auth_repository.dart   #   Mañana: FirebaseAuthRepositoryImpl
-│   ├── fake_categories_repository.dart
-│   ├── fake_expenses_repository.dart
-│   └── providers.dart              # Provider<AuthRepository>, etc. ÚNICO punto de cambio
-│                                   # cuando se conecte Firebase.
+├── data/                           # IMPLEMENTACIÓN de repos contra Firebase.
+│   ├── firebase_auth_repository.dart
+│   ├── firestore_categories_repository.dart
+│   ├── firestore_expenses_repository.dart
+│   ├── firestore_users_repository.dart
+│   └── providers.dart              # Provider<AuthRepository>, etc.
 │
 └── presentation/
     ├── screens/                    # Widgets de pantalla (Scaffold + body)
@@ -86,10 +86,9 @@ lib/
             └── *_notifier.dart
 ```
 
-**Por qué clean separa `domain` y `data`:** porque el día que cambiamos de
-`FakeXxxRepository` a `FirestoreXxxRepository`, NO tocamos ni viewmodels ni
-vistas. Solo cambiamos la implementación en `data/` y el lado derecho de los
-providers en `data/providers.dart`.
+**Por qué clean separa `domain` y `data`:** porque la implementación de los
+repos (hoy contra Firebase) es intercambiable sin tocar viewmodels ni vistas.
+Solo cambia el lado derecho de los providers en `data/providers.dart`.
 
 ---
 
@@ -232,7 +231,8 @@ Pongamos que querés agregar **presupuestos mensuales**. Pasos:
    - Crear `domain/budget.dart` con la entidad y validators.
    - Crear `domain/budgets_repository.dart` con la interface.
 2. **Data**:
-   - Crear `data/fake_budgets_repository.dart`.
+   - Crear `data/firestore_budgets_repository.dart` con `withConverter` y la
+     colección correspondiente.
    - Agregar `budgetsRepositoryProvider` en `data/providers.dart`.
 3. **ViewModels**:
    - Crear `presentation/viewmodels/states/budgets_list_state.dart`.
@@ -268,64 +268,31 @@ re-evalúa el redirect y lleva al lugar correcto.
 
 ---
 
-## 8. Estado actual: Fake repositories
+## 8. Capa de datos: Firebase
 
-**Importante:** TODO en `data/` hoy son `FakeXxxRepository` con datos en
-memoria. Esto permite ver las vistas funcionando end-to-end sin Firebase.
+La capa `data/` implementa los repos contra Firebase:
 
-- `FakeAuthRepository`: usuario de prueba `demo@mango.com / 123456`. El
-  registro crea un user en memoria.
-- `FakeCategoriesRepository`: 6 categorías seed (Comida, Transporte,
-  Entretenimiento, Hogar, Educación, Salud).
-- `FakeExpensesRepository`: 12 gastos seed distribuidos en los últimos meses,
-  algunos en USD, para que las estadísticas tengan algo que graficar.
+- `FirebaseAuthRepositoryImpl` (Auth + lectura del doc en `users/{uid}`).
+- `FirestoreUsersRepositoryImpl` (colección `users`, fuente de verdad del
+  estado del usuario para soft delete).
+- `FirestoreCategoriesRepositoryImpl` (colección `categories`).
+- `FirestoreExpensesRepositoryImpl` (colección `expenses`, con paginación
+  cursor-based por `createdAt`).
 
----
+En el primer registro se siembran 5 categorías por defecto (Comida,
+Transporte, Entretenimiento, Hogar, Salud) vía
+`seedDefaultCategories(userId)`.
 
-## 9. Migración a Firebase (lo que viene)
+### Índices de Firestore que ya hacen falta
 
-Cuando estemos listos para conectar Firebase real, los pasos son:
+- `expenses`: `userId ASC + createdAt DESC` (paginación de la home).
+- `expenses`: `userId ASC + date ASC` (rango para estadísticas).
+- `categories`: `userId ASC + titleLower ASC` (orden alfabético).
 
-1. **Configurar Firebase**:
-   - `flutterfire configure`
-   - Habilitar Authentication (email/password) en consola Firebase.
-   - Crear las colecciones en Firestore: `users`, `categories`, `expenses`.
-2. **Descomentar dependencias** en `pubspec.yaml`:
-   ```yaml
-   firebase_core: ^2.27.0
-   cloud_firestore: ^4.15.8
-   firebase_auth: ^4.17.8
-   ```
-3. **Descomentar inicialización** en `main.dart`:
-   ```dart
-   WidgetsFlutterBinding.ensureInitialized();
-   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-   ```
-4. **Crear las implementaciones reales** en `data/`:
-   - `data/firebase_auth_repository.dart` que implemente `AuthRepository`.
-   - `data/firestore_expenses_repository.dart` que implemente
-     `ExpensesRepository`. Mirar `movie_app_firebase_clean` del profe para
-     ver cómo usar `withConverter`, `fromFirestore`, `toFirestore`.
-   - `data/firestore_categories_repository.dart`.
-5. **Cambiar el lado derecho de los providers** en `data/providers.dart`:
-   ```dart
-   final expensesRepositoryProvider = Provider<ExpensesRepository>(
-     (ref) => FirestoreExpensesRepositoryImpl(),  // antes: FakeExpensesRepository()
-   );
-   ```
-6. **Crear los índices de Firestore** que las queries usen:
-   - `expenses` por `userId` + `createdAt DESC` (paginación de la home).
-   - `expenses` por `userId` + `date` (rango para estadísticas).
-   - `categories` por `userId` + `title` (orden alfabético).
+Los compuestos no son automáticos: se crean en consola o con
+`firestore.indexes.json`. **El profe dijo explícitamente que esto va sí o sí.**
 
-   Los simples (un solo campo) son automáticos. Los compuestos hay que
-   crearlos a mano en la consola o con `firestore.indexes.json`. **El profe
-   dijo explícitamente que esto va sí o sí.**
-
-7. **Reemplazar `convertUsdToArs`** en `ExpenseFormNotifier` por una llamada
-   real a `https://dolarapi.com/v1/dolares/{tipo}`.
-
-### Estructura sugerida de docs en Firestore
+### Estructura de docs en Firestore
 
 ```
 users/{userId}
@@ -356,7 +323,7 @@ expenses/{expenseId}
 
 ---
 
-## 10. Conversión USD → ARS
+## 9. Conversión USD → ARS
 
 Hoy: tabla local en `ExpenseFormNotifier.convertUsdToArs`. Es provisional y
 **la vista no debería saberlo**, por eso el método vive en el notifier.
@@ -367,7 +334,7 @@ front agarra eso porque el profe dijo "lógica de negocio en el front".
 
 ---
 
-## 11. Estadísticas
+## 10. Estadísticas
 
 `StatisticsNotifier` calcula dos cosas:
 
@@ -376,21 +343,19 @@ front agarra eso porque el profe dijo "lógica de negocio en el front".
 - **Bar chart** del último año: agrupa por trimestre (`year-Qn`), suma totales,
   y produce `List<QuarterBar>`.
 
-Cuando se conecte Firestore, las queries deberían usar
-`getExpensesInRange(from, to)` que ya está en la interface — **necesita
-índice compuesto** `userId + date`.
+Las queries usan `getExpensesInRange(from, to)` — **necesita el índice
+compuesto** `userId + date`.
 
 ---
 
-## 12. Paginación de la home
+## 11. Paginación de la home
 
 `ExpensesListNotifier` usa cursor-based pagination con
 `pageSize = 10` y como cursor el `createdAt` del último gasto cargado. La
 home tiene un `ScrollController` que detecta proximidad al final de la lista
 y dispara `loadMore`.
 
-Cuando se migre a Firestore, `getExpenses(userId, limit, lastCreatedAt)`
-debe traducirse a:
+`getExpenses(userId, limit, lastCreatedAt)` se traduce a:
 
 ```dart
 Query<Expense> q = db.collection('expenses')
@@ -400,11 +365,11 @@ Query<Expense> q = db.collection('expenses')
 if (lastCreatedAt != null) q = q.startAfter([Timestamp.fromDate(lastCreatedAt)]);
 ```
 
-Y eso necesita un **índice compuesto** `userId + createdAt DESC`.
+Y eso necesita el **índice compuesto** `userId + createdAt DESC`.
 
 ---
 
-## 13. Comandos útiles
+## 12. Comandos útiles
 
 ```bash
 flutter pub get                    # Instalar deps
@@ -416,7 +381,7 @@ flutter clean && flutter pub get   # Cuando algo raro pasa
 
 ---
 
-## 14. Checklist antes de commitear
+## 13. Checklist antes de commitear
 
 - [ ] `flutter analyze` sin warnings nuevos.
 - [ ] La pantalla nueva sigue el patrón Screen → Notifier → State → Repository.
@@ -428,7 +393,7 @@ flutter clean && flutter pub get   # Cuando algo raro pasa
 
 ---
 
-## 15. Cosas que NO hay que hacer
+## 14. Cosas que NO hay que hacer
 
 - No usar `setState` para datos del dominio. Eso va en el notifier.
 - No mezclar `StateNotifier` (legacy) con `Notifier`. Solo usar `Notifier`/`AutoDisposeNotifier`.

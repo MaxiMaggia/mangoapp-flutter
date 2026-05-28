@@ -1,12 +1,13 @@
+import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/providers.dart';
 import '../../../domain/categories_repository.dart';
+import '../../../domain/dolar_quote.dart';
 import '../../../domain/expense.dart';
 import '../../../domain/expenses_repository.dart';
 import '../../utils/base_screen_state.dart';
 import '../states/expense_form_state.dart';
-import 'auth_notifier.dart';
 import '../providers.dart';
 
 class ExpenseFormNotifier extends AutoDisposeNotifier<ExpenseFormState> {
@@ -14,8 +15,6 @@ class ExpenseFormNotifier extends AutoDisposeNotifier<ExpenseFormState> {
       ref.read(expensesRepositoryProvider);
   late final CategoriesRepository _categoriesRepo =
       ref.read(categoriesRepositoryProvider);
-  late final AuthNotifier _authNotifier =
-      ref.read(authViewModelProvider.notifier);
 
   @override
   ExpenseFormState build() => const ExpenseFormState();
@@ -134,20 +133,29 @@ class ExpenseFormNotifier extends AutoDisposeNotifier<ExpenseFormState> {
     }
   }
 
-  /// Conversion USD -> ARS.
-  ///
-  /// PROVISIONAL: usa una tabla local. Cuando se conecte el front a una API
-  /// (ej: dolarapi.com) este metodo va a hacer un GET y devolver el resultado.
-  /// El profe pidio meter logica de negocio en el front, asi que esto se
-  /// queda aca.
-  double convertUsdToArs(double usd, String dolarTypeCode) {
-    const rates = {
-      'oficial': 1100.0,
-      'tarjeta': 1800.0,
-      'mep': 1450.0,
-      'blue': 1500.0,
-    };
-    final rate = rates[dolarTypeCode] ?? 1500.0;
-    return usd * rate;
+  /// Conversion USD -> ARS usando la cotización 'venta' de la casa
+  /// correspondiente. Si la API no tiene la casa pedida, cae a una tabla
+  /// local de respaldo.
+  double convertUsdToArs(
+    double usd,
+    String dolarTypeCode,
+    List<DolarQuote> quotes,
+  ) {
+    final dolarType = DolarType.all.firstWhereOrNull(
+      (t) => t.code == dolarTypeCode,
+    );
+    final apiCasa = dolarType?.apiCasa ?? dolarTypeCode;
+    final quote = quotes.firstWhereOrNull((q) => q.casa == apiCasa);
+    if (quote == null) {
+      const fallback = {
+        'oficial': 1100.0,
+        'tarjeta': 1800.0,
+        'mep': 1450.0,
+        'blue': 1500.0,
+      };
+      final rate = fallback[dolarTypeCode] ?? 1500.0;
+      return usd * rate;
+    }
+    return usd * quote.venta;
   }
 }

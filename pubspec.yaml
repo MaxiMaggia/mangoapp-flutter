@@ -36,6 +36,9 @@ dependencies:
   cloud_firestore: ^4.15.8
   firebase_auth: ^4.17.8
 
+  # HTTP client (cotización del dólar)
+  http: ^1.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

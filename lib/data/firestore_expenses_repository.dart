@@ -87,6 +87,25 @@ class FirestoreExpensesRepositoryImpl implements ExpensesRepository {
   }
 
   @override
+  Future<void> markAllUserExpensesAsDeleted(String userId) async {
+    final snapshot = await _collection
+        .where('userId', isEqualTo: userId)
+        .where('status', isEqualTo: EntityStatus.available.name)
+        .get();
+    if (snapshot.docs.isEmpty) return;
+
+    final batch = _firestore.batch();
+    final now = Timestamp.now();
+    for (final doc in snapshot.docs) {
+      batch.update(doc.reference, {
+        'status': EntityStatus.deleted.name,
+        'updatedAt': now,
+      });
+    }
+    await batch.commit();
+  }
+
+  @override
   Future<List<Expense>> getExpensesInRange({
     required String userId,
     required DateTime from,

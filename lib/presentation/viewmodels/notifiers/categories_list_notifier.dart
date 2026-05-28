@@ -4,7 +4,6 @@ import '../../../data/providers.dart';
 import '../../../domain/categories_repository.dart';
 import '../../utils/base_screen_state.dart';
 import '../states/categories_list_state.dart';
-import 'auth_notifier.dart';
 import '../providers.dart';
 
 class CategoriesListNotifier extends Notifier<CategoriesListState> {

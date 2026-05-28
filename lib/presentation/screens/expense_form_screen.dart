@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/app_theme.dart';
 import '../../domain/category.dart';
+import '../../domain/dolar_quote.dart';
 import '../../domain/expense.dart';
 import '../utils/base_screen_state.dart';
 import '../utils/category_icons.dart';
@@ -91,9 +93,10 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
 
     final amount = double.tryParse(_amountCtrl.text.replaceAll(',', '.')) ?? 0;
     final notifier = ref.read(expenseFormViewModelProvider.notifier);
+    final quotes = ref.read(dolarQuotesProvider).valueOrNull ?? const [];
 
     final amountArs = _currency == Currency.usd
-        ? notifier.convertUsdToArs(amount, _dolarType)
+        ? notifier.convertUsdToArs(amount, _dolarType, quotes)
         : amount;
     final originalAmount = _currency == Currency.usd ? amount : null;
 
@@ -111,6 +114,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(expenseFormViewModelProvider);
+    final quotesAsync = ref.watch(dolarQuotesProvider);
 
     // Hidratar form si llego un expense para editar
     if (state.expense != null) {
@@ -235,12 +239,9 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                       onChanged: (v) => setState(() => _dolarType = v ?? 'tarjeta'),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      'Convertimos a pesos al guardar usando la cotizacion seleccionada.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary.withOpacity(0.9),
-                      ),
+                    _DolarQuoteBox(
+                      quotesAsync: quotesAsync,
+                      dolarTypeCode: _dolarType,
                     ),
                   ],
                 ],
@@ -254,6 +255,95 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
             ),
         ],
       ),
+    );
+  }
+}
+
+class _DolarQuoteBox extends StatelessWidget {
+  final AsyncValue<List<DolarQuote>> quotesAsync;
+  final String dolarTypeCode;
+
+  const _DolarQuoteBox({
+    required this.quotesAsync,
+    required this.dolarTypeCode,
+  });
+
+  static final _dateTimeFmt = DateFormat('dd/MM/yyyy HH:mm');
+
+  @override
+  Widget build(BuildContext context) {
+    return quotesAsync.when(
+      loading: () => Text(
+        'Cargando cotización...',
+        style: TextStyle(
+          fontSize: 12,
+          color: AppColors.textSecondary.withOpacity(0.9),
+        ),
+      ),
+      error: (_, __) => Text(
+        'No se pudo obtener cotización, se usará tabla por defecto',
+        style: const TextStyle(
+          fontSize: 12,
+          color: AppColors.mangoDeep,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      data: (quotes) {
+        final apiCasa = DolarType.all
+                .firstWhere(
+                  (t) => t.code == dolarTypeCode,
+                  orElse: () => DolarType.blue,
+                )
+                .apiCasa;
+        DolarQuote? quote;
+        for (final q in quotes) {
+          if (q.casa == apiCasa) {
+            quote = q;
+            break;
+          }
+        }
+
+        if (quote == null) {
+          return Text(
+            'No se pudo obtener cotización, se usará tabla por defecto',
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.mangoDeep,
+              fontWeight: FontWeight.w600,
+            ),
+          );
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.mangoYellow.withOpacity(0.18),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '1 USD = ${Fmt.money(quote.venta)} ARS (${quote.nombre})',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.mangoDeep,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Actualizado: '
+                '${_dateTimeFmt.format(quote.fechaActualizacion.toLocal())}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

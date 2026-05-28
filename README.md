@@ -10,10 +10,8 @@ flutter pub get
 flutter run
 ```
 
-Login de prueba (Fake repo en memoria):
-
-- **Email**: `demo@mango.com`
-- **Password**: `123456`
+Crear un usuario desde la pantalla de registro para entrar — la auth corre
+contra Firebase, no hay usuarios de prueba.
 
 ## Documentación
 
@@ -27,7 +25,7 @@ Login de prueba (Fake repo en memoria):
 - Riverpod (Notifier moderno)
 - go_router con StatefulShellRoute
 - fl_chart para gráficos
-- Firebase Auth + Firestore *(pendiente de integrar — hoy son Fakes en memoria)*
+- Firebase Auth + Firestore
 
 ## Estructura
 
@@ -35,7 +33,7 @@ Login de prueba (Fake repo en memoria):
 lib/
 ├── core/         # Router + Theme
 ├── domain/       # Entidades + interfaces de repos
-├── data/         # Implementación de repos (hoy Fake, mañana Firebase)
+├── data/         # Implementación de repos contra Firebase
 └── presentation/
     ├── screens/
     ├── widgets/
@@ -51,8 +49,6 @@ lib/
 - ✅ CRUD de gastos
 - ✅ CRUD de categorías
 - ✅ Soporte ARS / USD con conversión
-- ✅ Estadísticas: pie chart mensual + barras trimestrales
+- ✅ Estadísticas: pie chart mensual 
 - ✅ Bottom navbar (Home / Estadísticas / Perfil)
-- ⏳ Integración Firebase real
-- ⏳ Adjuntar comprobantes (Storage)
-- ⏳ Cotización en vivo desde dolarapi.com
+- ✅ Cotización en vivo desde dolarapi.com

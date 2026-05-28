@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/providers.dart';
+import '../../domain/dolar_quote.dart';
 import 'notifiers/auth_notifier.dart';
 import 'notifiers/categories_list_notifier.dart';
 import 'notifiers/category_form_notifier.dart';
@@ -41,3 +43,9 @@ final categoryFormViewModelProvider =
 final statisticsViewModelProvider =
     NotifierProvider<StatisticsNotifier, StatisticsState>(
         StatisticsNotifier.new);
+
+/// Cotizaciones del dólar cacheadas por sesión.
+final dolarQuotesProvider = FutureProvider<List<DolarQuote>>((ref) async {
+  final repo = ref.read(dolarRepositoryProvider);
+  return repo.getQuotes();
+});

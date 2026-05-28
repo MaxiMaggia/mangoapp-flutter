@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/app_theme.dart';
 import '../viewmodels/providers.dart';
 import '../widgets/mango_logo.dart';
+import 'dolar_rates_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   static const name = 'ProfileScreen';
@@ -37,16 +38,8 @@ class ProfileScreen extends ConsumerWidget {
           _SettingTile(
             icon: Icons.attach_money,
             title: 'Cotizacion del dolar',
-            subtitle: 'Definir tipo de cambio por defecto',
-            enabled: false,
-            onTap: () {},
-          ),
-          _SettingTile(
-            icon: Icons.notifications_outlined,
-            title: 'Notificaciones',
-            subtitle: 'Recordatorios de gastos',
-            enabled: false,
-            onTap: () {},
+            subtitle: 'Ver tipos de cambio actuales',
+            onTap: () => context.pushNamed(DolarRatesScreen.name),
           ),
           const SizedBox(height: 24),
           _SectionHeader(text: 'Cuenta'),
@@ -56,6 +49,13 @@ class ProfileScreen extends ConsumerWidget {
             iconColor: AppColors.danger,
             title: 'Cerrar sesion',
             onTap: () => _confirmLogout(context, ref),
+          ),
+          _SettingTile(
+            icon: Icons.delete_forever,
+            iconColor: AppColors.danger,
+            title: 'Eliminar cuenta',
+            subtitle: 'Eliminar tu cuenta y todos tus datos',
+            onTap: () => _confirmDeleteAccount(context, ref),
           ),
           const SizedBox(height: 24),
           const Center(child: MangoLogo(size: 32)),
@@ -94,6 +94,118 @@ class ProfileScreen extends ConsumerWidget {
     if (confirmed == true) {
       await ref.read(authViewModelProvider.notifier).signOut();
       if (context.mounted) context.go('/login');
+    }
+  }
+
+  Future<void> _confirmDeleteAccount(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final passwordCtrl = TextEditingController();
+    var isLoading = false;
+    String? errorText;
+
+    final deleted = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            final canSubmit =
+                !isLoading && passwordCtrl.text.trim().isNotEmpty;
+
+            Future<void> handleDelete() async {
+              setStateDialog(() {
+                isLoading = true;
+                errorText = null;
+              });
+              final pwd = passwordCtrl.text;
+              try {
+                await ref
+                    .read(authViewModelProvider.notifier)
+                    .deleteAccount(pwd);
+                // Éxito: NO hacemos pop. El authStateChanges dispara el
+                // signOut que limpia el user y el router redirige al login,
+                // desmontando esta pantalla (y el diálogo con ella). Hacer
+                // pop acá causaría un parpadeo por competir con el redirect.
+              } catch (e) {
+                // Error (ej: contraseña incorrecta): el diálogo sigue montado
+                // porque reauthenticate falló antes del signOut. Mostramos el
+                // error localmente.
+                if (dialogContext.mounted) {
+                  setStateDialog(() {
+                    isLoading = false;
+                    errorText = e.toString().replaceAll('Exception: ', '');
+                  });
+                }
+              }
+            }
+
+            return AlertDialog(
+              title: const Text('¿Eliminar cuenta?'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Se van a marcar como eliminados tu usuario, tus '
+                    'gastos y tus categorías. Esta acción no se puede '
+                    'deshacer.',
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: passwordCtrl,
+                    obscureText: true,
+                    autofocus: true,
+                    enabled: !isLoading,
+                    onChanged: (_) => setStateDialog(() {}),
+                    decoration: InputDecoration(
+                      labelText: 'Confirmá tu contraseña',
+                      hintText: 'Ingresá tu contraseña',
+                      errorText: errorText,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+                TextButton(
+                  onPressed: canSubmit ? handleDelete : null,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.danger,
+                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.danger,
+                          ),
+                        )
+                      : const Text('Eliminar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    passwordCtrl.dispose();
+
+    if (deleted == true && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tu cuenta fue eliminada'),
+          backgroundColor: AppColors.mangoLeaf,
+        ),
+      );
     }
   }
 }
@@ -196,7 +308,6 @@ class _SettingTile extends StatelessWidget {
   final String title;
   final String? subtitle;
   final VoidCallback onTap;
-  final bool enabled;
 
   const _SettingTile({
     required this.icon,
@@ -204,7 +315,6 @@ class _SettingTile extends StatelessWidget {
     this.subtitle,
     required this.onTap,
     this.iconColor,
-    this.enabled = true,
   });
 
   @override
@@ -212,8 +322,7 @@ class _SettingTile extends StatelessWidget {
     final color = iconColor ?? AppColors.mangoDeep;
     return Card(
       child: ListTile(
-        enabled: enabled,
-        onTap: enabled ? onTap : null,
+        onTap: onTap,
         leading: Container(
           width: 40,
           height: 40,
@@ -230,13 +339,11 @@ class _SettingTile extends StatelessWidget {
         subtitle: subtitle == null
             ? null
             : Text(
-                enabled ? subtitle! : '$subtitle (proximamente)',
+                subtitle!,
                 style: const TextStyle(fontSize: 12),
               ),
-        trailing: enabled
-            ? const Icon(Icons.chevron_right,
-                color: AppColors.textSecondary)
-            : null,
+        trailing: const Icon(Icons.chevron_right,
+            color: AppColors.textSecondary),
       ),
     );
   }

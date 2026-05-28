@@ -15,12 +15,20 @@ class Fmt {
   );
 
   static final _shortDate = DateFormat('dd/MM/yyyy', 'es_AR');
+  static final _dateTime = DateFormat('dd/MM/yyyy HH:mm', 'es_AR');
   static final _longDate = DateFormat("d 'de' MMMM, y", 'es_AR');
   static final _monthLabel = DateFormat('MMM yyyy', 'es_AR');
 
   static String money(num value) => _money.format(value);
   static String usd(num value) => _moneyUsd.format(value);
   static String shortDate(DateTime date) => _shortDate.format(date);
+  static String dateTime(DateTime date) => _dateTime.format(date);
   static String longDate(DateTime date) => _longDate.format(date);
   static String monthLabel(DateTime date) => _monthLabel.format(date);
+
+  /// "Mayo 2026" (con inicial mayúscula; es_AR lo devuelve en minúscula).
+  static String monthYear(DateTime date) {
+    final formatted = DateFormat('MMMM yyyy', 'es_AR').format(date);
+    return formatted[0].toUpperCase() + formatted.substring(1);
+  }
 }
