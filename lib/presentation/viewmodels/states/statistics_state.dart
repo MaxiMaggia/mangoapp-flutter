@@ -5,8 +5,8 @@ import '../../utils/base_screen_state.dart';
 
 /// Una porcion del grafico de torta para el mes seleccionado.
 class CategorySlice extends Equatable {
-  final Category category;
-  final double total;
+  final Category category; // la categoria que representa esta porcion
+  final double total; // cuanto se gasto en esa categoria ese mes
 
   const CategorySlice({required this.category, required this.total});
 
@@ -14,22 +14,26 @@ class CategorySlice extends Equatable {
   List<Object?> get props => [category, total];
 }
 
+/// Estado de la pantalla de estadisticas: grafico de torta por categoria del
+/// mes elegido, mas el total gastado en ese mes.
 class StatisticsState extends Equatable {
-  final BaseScreenState screenState;
+  final BaseScreenState screenState; // estado visual: loading / idle / error
 
   /// Primer dia del mes seleccionado (ej: DateTime(2026, 5, 1)).
   final DateTime selectedMonth;
-  final List<CategorySlice> pieSlices;
-  final double monthTotal;
+  final List<CategorySlice> pieSlices; // porciones del grafico (una por categoria)
+  final double monthTotal; // total gastado en el mes seleccionado
 
   StatisticsState({
     this.screenState = const BaseScreenState.idle(),
     DateTime? selectedMonth,
     this.pieSlices = const [],
     this.monthTotal = 0,
-  }) : selectedMonth = selectedMonth ??
+  }) : // si no nos dan mes, arrancamos en el mes actual (dia 1).
+        selectedMonth = selectedMonth ??
             DateTime(DateTime.now().year, DateTime.now().month, 1);
 
+  // Copia el estado cambiando solo los campos que le pasemos.
   StatisticsState copyWith({
     BaseScreenState? screenState,
     DateTime? selectedMonth,

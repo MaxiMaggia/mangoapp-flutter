@@ -8,6 +8,7 @@ import '../viewmodels/providers.dart';
 import '../widgets/mango_logo.dart';
 import 'register_screen.dart';
 
+// Pantalla de login: formulario de email y contraseña para ingresar a la app.
 class LoginScreen extends ConsumerStatefulWidget {
   static const name = 'LoginScreen';
   const LoginScreen({super.key});
@@ -20,7 +21,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  bool _obscure = true;
+  bool _obscure = true; // Controla si la contraseña se muestra u oculta.
 
   @override
   void dispose() {
@@ -29,6 +30,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
+  // Valida el form e intenta iniciar sesion con email y contraseña.
   void _submit() {
     FocusManager.instance.primaryFocus?.unfocus();
     if (!_formKey.currentState!.validate()) return;
@@ -38,10 +40,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
   }
 
+  // Arma la UI del login (logo, campos y boton de ingresar).
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(authViewModelProvider);
 
+    // Si logueo bien vamos al home; si hay error mostramos snackbar y lo limpiamos.
     ref.listen(authViewModelProvider, (_, next) {
       if (next.user != null) {
         context.go('/home');

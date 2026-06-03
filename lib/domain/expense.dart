@@ -43,7 +43,8 @@ class Expense extends Equatable {
   final DateTime date;
   final String? attachmentUrl;
   final DateTime createdAt;
-  final DateTime? updatedAt;
+  final DateTime updatedAt; // siempre presente: igual a createdAt al crear.
+  final DateTime? deletedAt; // momento del borrado logico (null si esta vivo).
   final EntityStatus status;
 
   Expense({
@@ -58,10 +59,13 @@ class Expense extends Equatable {
     required this.date,
     this.attachmentUrl,
     DateTime? createdAt,
-    this.updatedAt,
+    DateTime? updatedAt,
+    this.deletedAt,
     this.status = EntityStatus.available,
-  }) : createdAt = createdAt ?? DateTime.now();
+  })  : createdAt = createdAt ?? DateTime.now(),
+        updatedAt = updatedAt ?? (createdAt ?? DateTime.now());
 
+  // Devuelve una copia del gasto cambiando solo los campos que le pases.
   Expense copyWith({
     String? id,
     String? userId,
@@ -75,6 +79,8 @@ class Expense extends Equatable {
     String? attachmentUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DateTime? deletedAt,
+    bool clearDeletedAt = false,
     EntityStatus? status,
   }) =>
       Expense(
@@ -90,6 +96,7 @@ class Expense extends Equatable {
         attachmentUrl: attachmentUrl ?? this.attachmentUrl,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
+        deletedAt: clearDeletedAt ? null : (deletedAt ?? this.deletedAt),
         status: status ?? this.status,
       );
 
@@ -107,11 +114,14 @@ class Expense extends Equatable {
         attachmentUrl,
         createdAt,
         updatedAt,
+        deletedAt,
         status,
       ];
 
+  // Convierte el gasto al mapa que se guarda en Firestore.
   Map<String, dynamic> toFirestore() {
     return {
+      if (id != null) 'id': id,
       'userId': userId,
       'name': name,
       'categoryId': categoryId,
@@ -122,18 +132,20 @@ class Expense extends Equatable {
       'date': Timestamp.fromDate(date),
       if (attachmentUrl != null) 'attachmentUrl': attachmentUrl,
       'createdAt': Timestamp.fromDate(createdAt),
-      if (updatedAt != null) 'updatedAt': Timestamp.fromDate(updatedAt!),
+      'updatedAt': Timestamp.fromDate(updatedAt),
+      if (deletedAt != null) 'deletedAt': Timestamp.fromDate(deletedAt!),
       'status': status.name,
     };
   }
 
+  // Reconstruye un gasto a partir del documento que viene de Firestore.
   static Expense fromFirestore(
     DocumentSnapshot<Map<String, dynamic>> snapshot,
     SnapshotOptions? options,
   ) {
     final data = snapshot.data()!;
     return Expense(
-      id: snapshot.id,
+      id: (data['id'] as String?) ?? snapshot.id,
       userId: data['userId'] as String,
       name: data['name'] as String,
       categoryId: data['categoryId'] as String,
@@ -148,6 +160,9 @@ class Expense extends Equatable {
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: data['updatedAt'] != null
           ? (data['updatedAt'] as Timestamp).toDate()
+          : (data['createdAt'] as Timestamp).toDate(),
+      deletedAt: data['deletedAt'] != null
+          ? (data['deletedAt'] as Timestamp).toDate()
           : null,
       status: EntityStatus.values.byName(
         (data['status'] as String?) ?? EntityStatus.available.name,
@@ -156,7 +171,9 @@ class Expense extends Equatable {
   }
 }
 
+// Reglas para validar un gasto antes de guardarlo (nombre, categoria, monto y fecha).
 extension ExpenseValidator on Expense {
+  // El gasto es valido solo si pasa todas las validaciones de abajo.
   bool get isValid =>
       isNameValid && isCategoryValid && isAmountValid && isDateValid;
   bool get isNameValid => name.trim().isNotEmpty;

@@ -9,12 +9,14 @@ import '../../../domain/entity_status.dart';
 import '../../utils/base_screen_state.dart';
 import '../states/auth_state.dart';
 
+// El cerebro de la autenticacion: sabe quien esta logueado y maneja login, registro, logout y borrado de cuenta.
 class AuthNotifier extends Notifier<AuthState> {
   late final AuthRepository _authRepo = ref.read(authRepositoryProvider);
   StreamSubscription<AppUser?>? _authSub;
 
   @override
   AuthState build() {
+    // Nos quedamos escuchando los cambios de sesion para reflejarlos en el estado.
     _authSub = _authRepo.authStateChanges.listen((user) async {
       if (user == null) {
         state = state.copyWith(
@@ -51,6 +53,7 @@ class AuthNotifier extends Notifier<AuthState> {
     return AuthState(user: _authRepo.currentUser);
   }
 
+  // Inicia sesion y deja el usuario en el estado (o el error si algo falla).
   Future<void> signIn(String email, String password) async {
     state = state.copyWith(screenState: const BaseScreenState.loading());
     try {
@@ -66,6 +69,7 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  // Registra un usuario nuevo y lo deja logueado (o muestra el error).
   Future<void> signUp({
     required String email,
     required String password,
@@ -89,6 +93,7 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  // Cierra la sesion y limpia el usuario del estado.
   Future<void> signOut() async {
     await _authRepo.signOut();
     state = state.copyWith(
@@ -99,9 +104,7 @@ class AuthNotifier extends Notifier<AuthState> {
 
   /// Borra la cuenta. NO toca el state a propósito: el listener de
   /// authStateChanges detecta el signOut interno del repo y limpia el user
-  /// (que dispara el redirect al login). Tocar el state acá además del
-  /// listener generaba una condición de carrera con el pop del diálogo.
-  /// Si falla, la excepción sube al diálogo, que la maneja con estado local.
+  /// (que dispara el redirect al login). 
   Future<void> deleteAccount(String password) async {
     await _authRepo.deleteAccount(password: password);
   }

@@ -6,6 +6,7 @@ import '../../../domain/expenses_repository.dart';
 import '../../utils/base_screen_state.dart';
 import '../states/expense_details_state.dart';
 
+// El cerebro de la pantalla de detalle: carga un gasto puntual (con su categoria) y lo puede borrar.
 class ExpenseDetailsNotifier
     extends AutoDisposeFamilyNotifier<ExpenseDetailsState, String> {
   late final ExpensesRepository _expensesRepo =
@@ -15,12 +16,14 @@ class ExpenseDetailsNotifier
 
   @override
   ExpenseDetailsState build(String expenseId) {
+    // Apenas se crea el notifier, ya disparamos la carga del gasto.
     fetch(expenseId);
     return const ExpenseDetailsState(
       screenState: BaseScreenState.loading(),
     );
   }
 
+  // Trae el gasto y su categoria; si no lo encuentra, deja el estado en error.
   Future<void> fetch(String expenseId) async {
     try {
       final expense = await _expensesRepo.getExpenseById(expenseId);
@@ -43,6 +46,7 @@ class ExpenseDetailsNotifier
     }
   }
 
+  // Borra el gasto actual y marca wasDeleted para que la pantalla sepa que tiene que volver atras.
   Future<void> delete() async {
     final id = state.expense?.id;
     if (id == null) return;

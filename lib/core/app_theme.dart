@@ -16,7 +16,9 @@ class AppColors {
   static const danger = Color(0xFFEF4444);
 }
 
+// Arma el tema visual de toda la app (Material 3) a partir de la paleta de Mango.
 class AppTheme {
+  // El unico tema (claro) que usa Mango: define colores, cards, inputs, botones y la navbar.
   static ThemeData get light {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: AppColors.mangoOrange,

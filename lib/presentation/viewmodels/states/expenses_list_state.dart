@@ -3,13 +3,15 @@ import 'package:equatable/equatable.dart';
 import '../../../domain/expense.dart';
 import '../../utils/base_screen_state.dart';
 
+/// Estado de la pantalla principal: lista de gastos con busqueda, filtro por
+/// categoria y paginado (scroll infinito).
 class ExpensesListState extends Equatable {
-  final BaseScreenState screenState;
-  final List<Expense> expenses;
-  final String searchQuery;
+  final BaseScreenState screenState; // estado visual: loading / idle / error
+  final List<Expense> expenses; // gastos ya cargados (las paginas que trajimos)
+  final String searchQuery; // texto del buscador
   final String? categoryFilterId; // null = todas
-  final bool hasMore;
-  final bool isLoadingMore;
+  final bool hasMore; // todavia quedan paginas por traer del repo
+  final bool isLoadingMore; // estamos trayendo la siguiente pagina
 
   const ExpensesListState({
     this.screenState = const BaseScreenState.idle(),
@@ -32,6 +34,9 @@ class ExpensesListState extends Equatable {
     }).toList();
   }
 
+  // Copia el estado cambiando solo lo que le pasemos. clearCategoryFilter
+  // fuerza el filtro a null (volver a "todas"), porque con el ?? no se puede
+  // distinguir "no lo toques" de "ponelo en null".
   ExpensesListState copyWith({
     BaseScreenState? screenState,
     List<Expense>? expenses,

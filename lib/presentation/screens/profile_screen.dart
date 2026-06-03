@@ -7,10 +7,12 @@ import '../viewmodels/providers.dart';
 import '../widgets/mango_logo.dart';
 import 'dolar_rates_screen.dart';
 
+// Pantalla de perfil: datos del usuario, accesos a config (categorias, dolar) y acciones de cuenta.
 class ProfileScreen extends ConsumerWidget {
   static const name = 'ProfileScreen';
   const ProfileScreen({super.key});
 
+  // Arma la UI del perfil (header, opciones de config y acciones de cuenta).
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authViewModelProvider).user;
@@ -72,6 +74,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
+  // Pide confirmacion, cierra sesion y manda al login.
   Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -97,119 +100,122 @@ class ProfileScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _confirmDeleteAccount(
-    BuildContext context,
-    WidgetRef ref,
-  ) async {
-    final passwordCtrl = TextEditingController();
-    var isLoading = false;
-    String? errorText;
-
-    final deleted = await showDialog<bool>(
+  // Abre el dialogo de eliminar cuenta. El dialogo maneja todo su ciclo de
+  // vida internamente (su propio ref y controller), por eso esto es minimo.
+  void _confirmDeleteAccount(BuildContext context, WidgetRef ref) {
+    showDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            final canSubmit =
-                !isLoading && passwordCtrl.text.trim().isNotEmpty;
-
-            Future<void> handleDelete() async {
-              setStateDialog(() {
-                isLoading = true;
-                errorText = null;
-              });
-              final pwd = passwordCtrl.text;
-              try {
-                await ref
-                    .read(authViewModelProvider.notifier)
-                    .deleteAccount(pwd);
-                // Éxito: NO hacemos pop. El authStateChanges dispara el
-                // signOut que limpia el user y el router redirige al login,
-                // desmontando esta pantalla (y el diálogo con ella). Hacer
-                // pop acá causaría un parpadeo por competir con el redirect.
-              } catch (e) {
-                // Error (ej: contraseña incorrecta): el diálogo sigue montado
-                // porque reauthenticate falló antes del signOut. Mostramos el
-                // error localmente.
-                if (dialogContext.mounted) {
-                  setStateDialog(() {
-                    isLoading = false;
-                    errorText = e.toString().replaceAll('Exception: ', '');
-                  });
-                }
-              }
-            }
-
-            return AlertDialog(
-              title: const Text('¿Eliminar cuenta?'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Se van a marcar como eliminados tu usuario, tus '
-                    'gastos y tus categorías. Esta acción no se puede '
-                    'deshacer.',
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: passwordCtrl,
-                    obscureText: true,
-                    autofocus: true,
-                    enabled: !isLoading,
-                    onChanged: (_) => setStateDialog(() {}),
-                    decoration: InputDecoration(
-                      labelText: 'Confirmá tu contraseña',
-                      hintText: 'Ingresá tu contraseña',
-                      errorText: errorText,
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isLoading
-                      ? null
-                      : () => Navigator.of(dialogContext).pop(false),
-                  child: const Text('Cancelar'),
-                ),
-                TextButton(
-                  onPressed: canSubmit ? handleDelete : null,
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.danger,
-                  ),
-                  child: isLoading
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.danger,
-                          ),
-                        )
-                      : const Text('Eliminar'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      barrierDismissible: true,
+      builder: (_) => const _DeleteAccountDialog(),
     );
-
-    passwordCtrl.dispose();
-
-    if (deleted == true && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Tu cuenta fue eliminada'),
-          backgroundColor: AppColors.mangoLeaf,
-        ),
-      );
-    }
   }
 }
 
+// Dialogo de eliminar cuenta como widget propio: tiene su propio ref y su
+// TextEditingController manejado en initState/dispose. Asi Riverpod limpia
+// las dependencias del dialogo solo cuando este muere, sin afectar al
+// ProfileScreen (que es lo que causaba el crash `_dependents.isEmpty`).
+class _DeleteAccountDialog extends ConsumerStatefulWidget {
+  const _DeleteAccountDialog();
+
+  @override
+  ConsumerState<_DeleteAccountDialog> createState() =>
+      _DeleteAccountDialogState();
+}
+
+class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
+  final _passwordCtrl = TextEditingController();
+  bool _isLoading = false;
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordCtrl.addListener(_onChanged);
+  }
+
+  void _onChanged() => setState(() {}); // refresca el estado del botón
+
+  @override
+  void dispose() {
+    _passwordCtrl.removeListener(_onChanged);
+    _passwordCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleDelete() async {
+    setState(() {
+      _isLoading = true;
+      _errorText = null;
+    });
+    try {
+      await ref
+          .read(authViewModelProvider.notifier)
+          .deleteAccount(_passwordCtrl.text);
+      // Éxito: NO hacemos pop manual. El authStateChanges limpia el user
+      // y el router redirige al login desmontando esta pantalla.
+    } catch (e) {
+      // Error (ej: contraseña incorrecta). El diálogo sigue vivo.
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorText = e.toString().replaceAll('Exception: ', '');
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canSubmit = !_isLoading && _passwordCtrl.text.trim().isNotEmpty;
+    return AlertDialog(
+      title: const Text('¿Eliminar cuenta?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Se van a marcar como eliminados tu usuario, tus gastos y '
+            'tus categorías. Esta acción no se puede deshacer.',
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _passwordCtrl,
+            obscureText: true,
+            autofocus: true,
+            enabled: !_isLoading,
+            decoration: InputDecoration(
+              labelText: 'Confirmá tu contraseña',
+              hintText: 'Ingresá tu contraseña',
+              errorText: _errorText,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        TextButton(
+          onPressed: canSubmit ? _handleDelete : null,
+          style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+          child: _isLoading
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.danger,
+                  ),
+                )
+              : const Text('Eliminar'),
+        ),
+      ],
+    );
+  }
+}
+
+// Header del perfil con avatar (inicial), nombre y email sobre un degrade.
 class _ProfileHeader extends StatelessWidget {
   final String displayName;
   final String email;
@@ -217,6 +223,7 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Inicial para el avatar: del nombre, sino del email, sino "?".
     final initial = displayName.isNotEmpty
         ? displayName[0].toUpperCase()
         : (email.isNotEmpty ? email[0].toUpperCase() : '?');
@@ -281,6 +288,7 @@ class _ProfileHeader extends StatelessWidget {
   }
 }
 
+// Encabezado de seccion en mayusculas (ej: "CONFIGURACION", "CUENTA").
 class _SectionHeader extends StatelessWidget {
   final String text;
   const _SectionHeader({required this.text});
@@ -302,6 +310,7 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+// Item de la lista de opciones (icono + titulo + subtitulo) que dispara una accion al tocarlo.
 class _SettingTile extends StatelessWidget {
   final IconData icon;
   final Color? iconColor;

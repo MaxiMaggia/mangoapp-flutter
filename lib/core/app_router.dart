@@ -53,9 +53,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final goingToAuth = state.matchedLocation == '/login' ||
           state.matchedLocation == '/register';
 
+      // Sin sesion no te dejamos entrar a nada que no sea login/registro...
       if (!loggedIn && !goingToAuth) return '/login';
+      // ...y si ya estas logueado, no te dejamos volver al login.
       if (loggedIn && goingToAuth) return '/home';
-      return null;
+      return null; // todo ok, seguis donde ibas
     },
     routes: [
       GoRoute(

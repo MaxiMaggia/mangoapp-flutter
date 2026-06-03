@@ -8,6 +8,7 @@ import '../viewmodels/providers.dart';
 import '../widgets/category_item.dart';
 import 'category_form_screen.dart';
 
+// Pantalla que lista las categorias del usuario, con opciones de crear, editar y borrar.
 class CategoryListScreen extends ConsumerStatefulWidget {
   static const name = 'CategoryListScreen';
   const CategoryListScreen({super.key});
@@ -21,15 +22,18 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen> {
   @override
   void initState() {
     super.initState();
+    // Carga inicial de categorias despues del primer frame.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(categoriesListViewModelProvider.notifier).fetch();
     });
   }
 
+  // Vuelve a pedir las categorias (pull-to-refresh o al volver de otra pantalla).
   Future<void> _refresh() async {
     await ref.read(categoriesListViewModelProvider.notifier).fetch();
   }
 
+  // Pide confirmacion antes de borrar y, si el usuario acepta, elimina la categoria.
   Future<void> _confirmDelete(String id, String title) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -57,6 +61,7 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen> {
     }
   }
 
+  // Arma la UI de la lista de categorias (loading/error/vacio/lista).
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(categoriesListViewModelProvider);
@@ -67,6 +72,7 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
+          // Abre el alta de categoria y refresca la lista al volver.
           await context.pushNamed(CategoryFormScreen.nameNew);
           if (mounted) _refresh();
         },
@@ -82,6 +88,7 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen> {
           ),
         ),
         idle: () {
+          // Estado vacio: todavia no hay categorias creadas.
           if (state.categories.isEmpty) {
             return Center(
               child: Padding(
@@ -121,6 +128,7 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen> {
                 return CategoryItem(
                   category: category,
                   onEdit: () async {
+                    // Abre la edicion de esa categoria y refresca al volver.
                     await context.pushNamed(
                       CategoryFormScreen.nameEdit,
                       pathParameters: {'id': category.id!},

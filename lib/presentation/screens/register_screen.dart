@@ -7,6 +7,7 @@ import '../utils/base_screen_state.dart';
 import '../viewmodels/providers.dart';
 import '../widgets/mango_logo.dart';
 
+// Pantalla de registro: formulario para crear una cuenta nueva (nombre, email y contraseña).
 class RegisterScreen extends ConsumerStatefulWidget {
   static const name = 'RegisterScreen';
   const RegisterScreen({super.key});
@@ -20,7 +21,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  bool _obscure = true;
+  bool _obscure = true; // Controla si la contraseña se muestra u oculta.
 
   @override
   void dispose() {
@@ -30,6 +31,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     super.dispose();
   }
 
+  // Valida el form y dispara el alta de usuario en el ViewModel de auth.
   void _submit() {
     FocusManager.instance.primaryFocus?.unfocus();
     if (!_formKey.currentState!.validate()) return;
@@ -40,10 +42,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         );
   }
 
+  // Arma la UI del formulario de registro.
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(authViewModelProvider);
 
+    // Si se crea el usuario vamos al home; si hay error mostramos snackbar y lo limpiamos.
     ref.listen(authViewModelProvider, (_, next) {
       if (next.user != null) {
         context.go('/home');

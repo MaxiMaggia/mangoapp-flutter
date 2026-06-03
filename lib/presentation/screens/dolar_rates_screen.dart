@@ -6,10 +6,12 @@ import '../../domain/dolar_quote.dart';
 import '../utils/formatter.dart';
 import '../viewmodels/providers.dart';
 
+// Pantalla que lista las cotizaciones actuales del dolar (compra/venta por tipo).
 class DolarRatesScreen extends ConsumerWidget {
   static const name = 'DolarRatesScreen';
   const DolarRatesScreen({super.key});
 
+  // Arma la UI segun el estado async de las cotizaciones (cargando/error/datos).
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final quotesAsync = ref.watch(dolarQuotesProvider);
@@ -22,6 +24,7 @@ class DolarRatesScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(dolarQuotesProvider),
         ),
         data: (quotes) => RefreshIndicator(
+          // Pull-to-refresh: invalida y vuelve a pedir las cotizaciones.
           onRefresh: () async {
             ref.invalidate(dolarQuotesProvider);
             await ref.read(dolarQuotesProvider.future);
@@ -38,6 +41,7 @@ class DolarRatesScreen extends ConsumerWidget {
   }
 }
 
+// Vista de error con boton para reintentar la carga de cotizaciones.
 class _ErrorView extends StatelessWidget {
   final VoidCallback onRetry;
   const _ErrorView({required this.onRetry});
@@ -71,6 +75,7 @@ class _ErrorView extends StatelessWidget {
   }
 }
 
+// Tarjeta de una cotizacion: nombre, compra/venta y cuando se actualizo.
 class _QuoteCard extends StatelessWidget {
   final DolarQuote quote;
   const _QuoteCard({required this.quote});
@@ -117,6 +122,7 @@ class _QuoteCard extends StatelessWidget {
   }
 }
 
+// Columna chica con una etiqueta (Compra/Venta) y su valor formateado.
 class _PriceColumn extends StatelessWidget {
   final String label;
   final double value;

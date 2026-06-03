@@ -7,13 +7,17 @@ import '../../utils/base_screen_state.dart';
 import '../states/category_form_state.dart';
 import '../providers.dart';
 
+// El cerebro de la pantalla de crear/editar categoria: carga la categoria a editar y la guarda.
 class CategoryFormNotifier extends AutoDisposeNotifier<CategoryFormState> {
+  // Acceso al repo de categorias (de donde leemos/escribimos).
   late final CategoriesRepository _repo =
       ref.read(categoriesRepositoryProvider);
 
+  // Arranca con el form vacio.
   @override
   CategoryFormState build() => const CategoryFormState();
 
+  // Trae una categoria existente para editarla y marca el form como "modo edicion".
   Future<void> loadCategory(String categoryId) async {
     state = state.copyWith(
       screenState: const BaseScreenState.loading(),
@@ -38,6 +42,7 @@ class CategoryFormNotifier extends AutoDisposeNotifier<CategoryFormState> {
     }
   }
 
+  // Crea o actualiza la categoria segun si estamos editando o no.
   Future<void> save({
     required String title,
     required String iconKey,
@@ -51,6 +56,7 @@ class CategoryFormNotifier extends AutoDisposeNotifier<CategoryFormState> {
       return;
     }
 
+    // Si editamos, copiamos la categoria existente con los nuevos datos; si no, creamos una nueva.
     final category = state.isEditing
         ? state.category!.copyWith(
             title: title,
@@ -64,6 +70,7 @@ class CategoryFormNotifier extends AutoDisposeNotifier<CategoryFormState> {
             colorValue: colorValue,
           );
 
+    // Validamos antes de pegarle a la base; si el nombre esta mal, marcamos el error en el campo.
     if (!category.isValid) {
       state = state.copyWith(
         screenState:

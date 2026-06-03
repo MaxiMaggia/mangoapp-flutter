@@ -4,14 +4,15 @@ import '../../../domain/category.dart';
 import '../../../domain/expense.dart';
 import '../../utils/base_screen_state.dart';
 
+/// Estado del formulario de alta/edicion de un gasto.
 class ExpenseFormState extends Equatable {
-  final BaseScreenState screenState;
+  final BaseScreenState screenState; // estado visual: loading / idle / error
   final Expense? expense; // si no es null, esta editando
-  final List<Category> categories;
-  final bool isEditing;
-  final bool wasSaved;
+  final List<Category> categories; // opciones para el selector de categoria
+  final bool isEditing; // true = editando, false = creando
+  final bool wasSaved; // se guardo ok -> la pantalla cierra/navega
 
-  // Errores por campo
+  // Errores por campo: marcan cada input en rojo si quedo invalido al validar.
   final bool nameError;
   final bool categoryError;
   final bool amountError;
@@ -29,6 +30,7 @@ class ExpenseFormState extends Equatable {
     this.dateError = false,
   });
 
+  // Copia el estado cambiando solo los campos que le pasemos.
   ExpenseFormState copyWith({
     BaseScreenState? screenState,
     Expense? expense,

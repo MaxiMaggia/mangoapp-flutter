@@ -20,6 +20,7 @@ class CategoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Slidable: si deslizas el tile hacia la izquierda aparecen Editar y Eliminar.
     return Slidable(
       key: ValueKey(category.id),
       endActionPane: ActionPane(

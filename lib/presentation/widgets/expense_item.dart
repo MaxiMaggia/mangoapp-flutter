@@ -7,9 +7,10 @@ import '../../domain/expense.dart';
 import '../utils/category_icons.dart';
 import '../utils/formatter.dart';
 
+// Cada fila de la lista de gastos: icono+color de la categoria, nombre, fecha y monto. Deslizable para editar/borrar.
 class ExpenseItem extends StatelessWidget {
   final Expense expense;
-  final Category? category;
+  final Category? category; // puede venir null si la categoria fue borrada
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -25,6 +26,7 @@ class ExpenseItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Si el gasto no tiene categoria (o fue borrada), mostramos valores por defecto.
     final categoryColor = category?.color ?? AppColors.mangoOrange;
     final iconKey = category?.iconKey ?? CategoryIcons.other.key;
     final categoryTitle = category?.title ?? 'Sin categoria';
@@ -109,6 +111,7 @@ class ExpenseItem extends StatelessWidget {
                         color: AppColors.textPrimary,
                       ),
                     ),
+                    // Si se cargo en dolares, abajo del monto en pesos mostramos el original en USD.
                     if (expense.currency == Currency.usd &&
                         expense.originalAmount != null)
                       Text(

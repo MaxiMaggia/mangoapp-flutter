@@ -10,6 +10,7 @@ import '../../utils/base_screen_state.dart';
 import '../states/expense_form_state.dart';
 import '../providers.dart';
 
+// El cerebro del formulario de gasto: carga categorias, carga un gasto a editar, valida y guarda.
 class ExpenseFormNotifier extends AutoDisposeNotifier<ExpenseFormState> {
   late final ExpensesRepository _expensesRepo =
       ref.read(expensesRepositoryProvider);
@@ -19,6 +20,7 @@ class ExpenseFormNotifier extends AutoDisposeNotifier<ExpenseFormState> {
   @override
   ExpenseFormState build() => const ExpenseFormState();
 
+  // Trae las categorias del usuario para llenar el selector del form.
   Future<void> loadCategories() async {
     final user = ref.read(authViewModelProvider).user;
     if (user == null) return;
@@ -30,6 +32,7 @@ class ExpenseFormNotifier extends AutoDisposeNotifier<ExpenseFormState> {
     }
   }
 
+  // Carga un gasto existente para editarlo (deja el form en modo edicion).
   Future<void> loadExpense(String expenseId) async {
     state = state.copyWith(
       screenState: const BaseScreenState.loading(),
@@ -74,6 +77,7 @@ class ExpenseFormNotifier extends AutoDisposeNotifier<ExpenseFormState> {
       return;
     }
 
+    // Si estamos editando, partimos del gasto que ya existe; si no, armamos uno nuevo.
     final expense = state.isEditing
         ? state.expense!.copyWith(
             name: name,
@@ -96,6 +100,7 @@ class ExpenseFormNotifier extends AutoDisposeNotifier<ExpenseFormState> {
             date: date,
           );
 
+    // Si algo no pasa la validacion, marcamos que campo fallo y cortamos sin guardar.
     if (!expense.isValid) {
       state = state.copyWith(
         screenState:
@@ -146,6 +151,7 @@ class ExpenseFormNotifier extends AutoDisposeNotifier<ExpenseFormState> {
     );
     final apiCasa = dolarType?.apiCasa ?? dolarTypeCode;
     final quote = quotes.firstWhereOrNull((q) => q.casa == apiCasa);
+    // Si la API no trajo esa cotizacion, usamos valores de respaldo fijos para no romper.
     if (quote == null) {
       const fallback = {
         'oficial': 1100.0,

@@ -12,6 +12,7 @@ import '../widgets/expense_item.dart';
 import 'expense_details_screen.dart';
 import 'expense_form_screen.dart';
 
+// Pantalla principal: lista paginada de gastos con buscador, filtro por categoria y total.
 class HomeScreen extends ConsumerStatefulWidget {
   static const name = 'HomeScreen';
   const HomeScreen({super.key});
@@ -29,12 +30,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    // Carga inicial de gastos + categorias del usuario logueado.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = ref.read(authViewModelProvider).user;
       if (user == null) return;
       ref.read(expensesListViewModelProvider.notifier).fetchInitial(user.id);
       ref.read(categoriesListViewModelProvider.notifier).fetch();
     });
+    // Escuchamos el scroll para disparar el paginado.
     _scrollController.addListener(_onScroll);
   }
 
@@ -57,6 +60,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
+  // Pull-to-refresh: recarga la lista de gastos desde cero.
   Future<void> _onRefresh() async {
     final user = ref.read(authViewModelProvider).user;
     if (user != null) {
@@ -64,14 +68,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
+  // Arma la UI del home: buscador/filtro opcionales, total y la lista de gastos.
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(expensesListViewModelProvider);
     final categoriesState = ref.watch(categoriesListViewModelProvider);
+    // Mapa id -> categoria para resolver rapido la categoria de cada gasto.
     final categoryById = {
       for (final c in categoriesState.categories) c.id!: c
     };
     final filteredExpenses = state.filteredExpenses;
+    // Suma de lo que se esta mostrando (respeta busqueda y filtro).
     final totalShown = filteredExpenses.fold<double>(
       0,
       (sum, e) => sum + e.amountArs,
@@ -165,9 +172,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.only(top: 6, bottom: 100),
+                    // Sumamos 1 item extra al final para el spinner de "cargando mas".
                     itemCount:
                         filteredExpenses.length + (state.isLoadingMore ? 1 : 0),
                     itemBuilder: (context, index) {
+                      // El ultimo item (cuando paginamos) es el loader.
                       if (index >= filteredExpenses.length) {
                         return const Padding(
                           padding: EdgeInsets.all(20),
@@ -211,6 +220,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  // Pide confirmacion y borra el gasto del usuario actual.
   Future<void> _confirmDelete(String id) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -241,6 +251,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
+// Barra horizontal de chips para filtrar los gastos por categoria (mas un "Todas").
 class _CategoryFilterBar extends StatelessWidget {
   final List<Category> categories;
   final String? selectedId;
@@ -279,6 +290,7 @@ class _CategoryFilterBar extends StatelessWidget {
   }
 }
 
+// Chip "Todas" que quita el filtro de categoria.
 class _AllChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
@@ -315,6 +327,7 @@ class _AllChip extends StatelessWidget {
   }
 }
 
+// Estado vacio del home cuando todavia no hay gastos cargados.
 class _EmptyState extends StatelessWidget {
   const _EmptyState();
 

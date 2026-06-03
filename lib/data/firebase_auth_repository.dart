@@ -7,7 +7,9 @@ import '../domain/entity_status.dart';
 import '../domain/expenses_repository.dart';
 import '../domain/users_repository.dart';
 
+// Implementa la autenticacion usando Firebase Auth, y coordina los datos del usuario en Firestore.
 class FirebaseAuthRepositoryImpl implements AuthRepository {
+  // Recibe los otros repos (para crear/borrar datos del usuario) y opcionalmente una instancia de FirebaseAuth.
   FirebaseAuthRepositoryImpl(
     this._categoriesRepo,
     this._usersRepo,
@@ -20,13 +22,16 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
   final ExpensesRepository _expensesRepo;
   final firebase_auth.FirebaseAuth _auth;
 
+  // El usuario logueado ahora mismo, o null si no hay sesion.
   @override
   AppUser? get currentUser => _auth.currentUser?.toAppUser();
 
+  // Stream que avisa cada vez que el usuario inicia o cierra sesion.
   @override
   Stream<AppUser?> get authStateChanges =>
       _auth.authStateChanges().map((user) => user?.toAppUser());
 
+  // Inicia sesion con email y contraseña; tira error si la cuenta esta borrada.
   @override
   Future<AppUser> signIn({
     required String email,
@@ -40,6 +45,7 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
       final user = credential.user;
       if (user == null) throw Exception('No se pudo iniciar sesion.');
 
+      // Si la cuenta esta marcada como borrada, lo sacamos: no lo dejamos entrar.
       final firestoreUser = await _usersRepo.getUserById(user.uid);
       if (firestoreUser != null &&
           firestoreUser.status == EntityStatus.deleted) {
@@ -48,6 +54,7 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
           'Esta cuenta fue eliminada. Si querés recuperarla, contactanos.',
         );
       }
+      // Si el usuario existe en Auth pero no tiene documento (cuenta vieja), se lo creamos al vuelo.
       if (firestoreUser == null) {
         try {
           await _usersRepo.createUserDocument(user.toAppUser());
@@ -63,6 +70,7 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
     }
   }
 
+  // Crea la cuenta, le pone el nombre, le arma su documento y le carga las categorias por defecto.
   @override
   Future<AppUser> signUp({
     required String email,
@@ -97,9 +105,11 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
     }
   }
 
+  // Cierra la sesion actual.
   @override
   Future<void> signOut() => _auth.signOut();
 
+  // Borra la cuenta: reautentica con la contraseña y marca como borrados gastos, categorias y usuario.
   @override
   Future<void> deleteAccount({required String password}) async {
     final user = _auth.currentUser;
@@ -112,6 +122,7 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
     }
     final uid = user.uid;
     try {
+      // Firebase exige reautenticar antes de operaciones sensibles como borrar la cuenta.
       final credential = firebase_auth.EmailAuthProvider.credential(
         email: email,
         password: password,
@@ -136,6 +147,7 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
     }
   }
 
+  // Traduce los codigos de error de Firebase a mensajes lindos para mostrarle al usuario.
   String _authMessage(firebase_auth.FirebaseAuthException error) {
     switch (error.code) {
       case 'email-already-in-use':
@@ -156,6 +168,7 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
   }
 }
 
+// Convierte el User de Firebase a nuestro AppUser, eligiendo el mejor nombre disponible.
 extension on firebase_auth.User {
   AppUser toAppUser({String? displayNameFallback}) => AppUser(
         id: uid,

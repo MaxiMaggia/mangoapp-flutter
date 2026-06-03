@@ -5,14 +5,17 @@ import '../../../domain/expenses_repository.dart';
 import '../../utils/base_screen_state.dart';
 import '../states/expenses_list_state.dart';
 
+// El cerebro de la pantalla de Home: maneja la lista de gastos, la paginacion, los filtros y la busqueda.
 class ExpensesListNotifier extends Notifier<ExpensesListState> {
   late final ExpensesRepository _repo = ref.read(expensesRepositoryProvider);
 
+  // Cuantos gastos traemos por pagina.
   static const _pageSize = 10;
 
   @override
   ExpensesListState build() => const ExpensesListState();
 
+  // Trae la primera tanda de gastos (con loading visible) cuando entras a Home.
   Future<void> fetchInitial(String userId) async {
     state = state.copyWith(screenState: const BaseScreenState.loading());
     try {
@@ -78,6 +81,7 @@ class ExpensesListNotifier extends Notifier<ExpensesListState> {
     }
   }
 
+  // Borra un gasto y lo saca de la lista al toque, sin tener que recargar todo.
   Future<void> delete(String expenseId, String userId) async {
     try {
       await _repo.deleteExpenseById(expenseId);
@@ -91,10 +95,12 @@ class ExpensesListNotifier extends Notifier<ExpensesListState> {
     }
   }
 
+  // Guarda lo que el usuario escribe en el buscador.
   void setSearch(String query) {
     state = state.copyWith(searchQuery: query);
   }
 
+  // Aplica (o saca, si viene null) el filtro por categoria.
   void setCategoryFilter(String? categoryId) {
     state = state.copyWith(
       categoryFilterId: categoryId,

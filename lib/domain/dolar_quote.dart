@@ -7,9 +7,9 @@ import 'package:equatable/equatable.dart';
 class DolarQuote extends Equatable {
   final String casa;
   final String nombre;
-  final double compra;
-  final double venta;
-  final DateTime fechaActualizacion;
+  final double compra; // a cuanto te compran el dolar
+  final double venta; // a cuanto te lo venden
+  final DateTime fechaActualizacion; // ultima vez que la API actualizo el valor
 
   const DolarQuote({
     required this.casa,
@@ -19,6 +19,7 @@ class DolarQuote extends Equatable {
     required this.fechaActualizacion,
   });
 
+  // Arma una cotizacion a partir del JSON que devuelve dolarapi.com.
   factory DolarQuote.fromJson(Map<String, dynamic> json) => DolarQuote(
         casa: json['casa'] as String,
         nombre: json['nombre'] as String,

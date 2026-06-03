@@ -12,6 +12,10 @@ import 'firestore_expenses_repository.dart';
 import 'firestore_users_repository.dart';
 
 /// Providers de los repositorios.
+/// Aca decidimos que implementacion concreta usa cada contrato. Si manana
+/// cambiamos de backend, solo tocamos estos providers y nada mas.
+
+// Auth: depende de los otros repos para poder limpiar/crear datos del usuario.
 final authRepositoryProvider = Provider<AuthRepository>(
   (ref) => FirebaseAuthRepositoryImpl(
     ref.read(categoriesRepositoryProvider),
@@ -20,18 +24,22 @@ final authRepositoryProvider = Provider<AuthRepository>(
   ),
 );
 
+// Gastos: implementacion sobre Firestore.
 final expensesRepositoryProvider = Provider<ExpensesRepository>(
   (ref) => FirestoreExpensesRepositoryImpl(),
 );
 
+// Categorias: implementacion sobre Firestore.
 final categoriesRepositoryProvider = Provider<CategoriesRepository>(
   (ref) => FirestoreCategoriesRepositoryImpl(),
 );
 
+// Documento de usuario: implementacion sobre Firestore.
 final usersRepositoryProvider = Provider<UsersRepository>(
   (ref) => FirestoreUsersRepositoryImpl(),
 );
 
+// Cotizaciones del dolar: implementacion contra la API publica.
 final dolarRepositoryProvider = Provider<DolarRepository>(
   (ref) => DolarApiRepository(),
 );

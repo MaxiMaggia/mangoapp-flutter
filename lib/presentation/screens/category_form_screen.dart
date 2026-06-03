@@ -6,10 +6,13 @@ import '../utils/base_screen_state.dart';
 import '../utils/category_icons.dart';
 import '../viewmodels/providers.dart';
 
+// Pantalla de alta/edicion de una categoria: nombre, icono y color.
+// Sirve para crear una nueva o editar una existente segun venga categoryId.
 class CategoryFormScreen extends ConsumerStatefulWidget {
   static const nameNew = 'CategoryFormScreenNew';
   static const nameEdit = 'CategoryFormScreenEdit';
 
+  // Si viene un id estamos editando; si es null, es alta.
   final String? categoryId;
   const CategoryFormScreen({super.key, this.categoryId});
 
@@ -24,11 +27,13 @@ class _CategoryFormScreenState extends ConsumerState<CategoryFormScreen> {
 
   String _iconKey = CategoryIcons.other.key;
   int _colorValue = CategoryColors.palette.first;
+  // Flag para hidratar el form una sola vez cuando llega la categoria a editar.
   bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
+    // Si estamos editando, pedimos la categoria al VM despues del primer frame.
     if (widget.categoryId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref
@@ -44,6 +49,7 @@ class _CategoryFormScreenState extends ConsumerState<CategoryFormScreen> {
     super.dispose();
   }
 
+  // Valida el form y manda a guardar la categoria al ViewModel.
   void _submit() {
     FocusManager.instance.primaryFocus?.unfocus();
     if (!_formKey.currentState!.validate()) return;
@@ -54,10 +60,12 @@ class _CategoryFormScreenState extends ConsumerState<CategoryFormScreen> {
         );
   }
 
+  // Arma la UI del formulario de categoria (preview, nombre, iconos y colores).
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(categoryFormViewModelProvider);
 
+    // Cuando llega la categoria a editar, volcamos sus datos al form (una vez).
     if (state.category != null && !_initialized) {
       _initialized = true;
       _titleCtrl.text = state.category!.title;
@@ -65,6 +73,7 @@ class _CategoryFormScreenState extends ConsumerState<CategoryFormScreen> {
       _colorValue = state.category!.colorValue;
     }
 
+    // Reacciona al resultado del guardado: si salio bien cierra, si fallo avisa.
     ref.listen(categoryFormViewModelProvider, (_, next) {
       if (next.wasSaved) {
         Navigator.of(context).pop(true);
@@ -159,6 +168,7 @@ class _CategoryFormScreenState extends ConsumerState<CategoryFormScreen> {
   }
 }
 
+// Etiqueta de seccion en mayusculas (tipo "ICONO", "COLOR").
 class _SectionLabel extends StatelessWidget {
   final String text;
   const _SectionLabel(this.text);
@@ -177,6 +187,7 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
+// Grilla de iconos disponibles; resalta el seleccionado con el color elegido.
 class _IconGrid extends StatelessWidget {
   final String selected;
   final Color color;
@@ -219,6 +230,7 @@ class _IconGrid extends StatelessWidget {
   }
 }
 
+// Paleta de colores en circulitos; el activo lleva tilde y sombra.
 class _ColorPalette extends StatelessWidget {
   final int selected;
   final ValueChanged<int> onTap;

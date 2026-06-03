@@ -9,6 +9,7 @@ import '../utils/formatter.dart';
 import '../viewmodels/providers.dart';
 import '../viewmodels/states/statistics_state.dart';
 
+// Pantalla de estadisticas: total y distribucion de gastos por categoria del mes elegido (pie chart).
 class StatisticsScreen extends ConsumerStatefulWidget {
   static const name = 'StatisticsScreen';
   const StatisticsScreen({super.key});
@@ -18,18 +19,22 @@ class StatisticsScreen extends ConsumerStatefulWidget {
 }
 
 class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
+  // Indice de la porcion del pie que esta "tocada" (-1 = ninguna).
   int _touchedPieIndex = -1;
 
   @override
   void initState() {
     super.initState();
+    // Carga inicial de las estadisticas despues del primer frame.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(statisticsViewModelProvider.notifier).load();
     });
   }
 
+  // Muestra un bottom sheet con los ultimos 12 meses para elegir cual ver.
   Future<void> _showMonthPicker(DateTime selected) async {
     final now = DateTime.now();
+    // Armamos la lista de meses hacia atras desde el actual.
     final months = List.generate(
       12,
       (i) => DateTime(now.year, now.month - i, 1),
@@ -73,6 +78,7 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
     );
   }
 
+  // Arma la UI de estadisticas (header del mes + grafico de torta o estado vacio).
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(statisticsViewModelProvider);
@@ -198,6 +204,7 @@ class _MonthHeader extends StatelessWidget {
   }
 }
 
+// Flechas para ir mes anterior/siguiente + chip que abre el selector de mes.
 class _MonthNavigator extends StatelessWidget {
   final DateTime selectedMonth;
   final bool canGoNext;
@@ -257,6 +264,7 @@ class _MonthNavigator extends StatelessWidget {
   }
 }
 
+// Botoncito de flecha; si onTap es null se ve deshabilitado (atenuado).
 class _ArrowButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onTap;
@@ -280,6 +288,7 @@ class _ArrowButton extends StatelessWidget {
   }
 }
 
+// Titulo de seccion (ej: "Distribucion por categoria").
 class _SectionTitle extends StatelessWidget {
   final String text;
   const _SectionTitle({required this.text});
@@ -297,6 +306,7 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
+// Placeholder cuando el mes elegido no tiene gastos para graficar.
 class _EmptyChart extends StatelessWidget {
   final String message;
   const _EmptyChart({required this.message});
@@ -359,6 +369,7 @@ class _PieChartCard extends StatelessWidget {
                     onTouch(response!.touchedSection!.touchedSectionIndex);
                   },
                 ),
+                // Una porcion por categoria; la tocada se agranda un poco.
                 sections: List.generate(slices.length, (i) {
                   final slice = slices[i];
                   final isTouched = i == touchedIndex;
@@ -369,6 +380,7 @@ class _PieChartCard extends StatelessWidget {
                   return PieChartSectionData(
                     color: slice.category.color,
                     value: slice.total,
+                    // Solo escribimos el % adentro si la porcion es lo bastante grande.
                     title: percent >= 7 ? '${percent.toStringAsFixed(0)}%' : '',
                     radius: radius,
                     titleStyle: const TextStyle(
@@ -391,6 +403,7 @@ class _PieChartCard extends StatelessWidget {
     );
   }
 }
+// Fila de la leyenda: icono + nombre de categoria, su % y el total en plata.
 class _LegendRow extends StatelessWidget {
   final CategorySlice slice;
   final double percent;

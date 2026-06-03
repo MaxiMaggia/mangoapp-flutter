@@ -12,10 +12,12 @@ import '../utils/category_icons.dart';
 import '../utils/formatter.dart';
 import '../viewmodels/providers.dart';
 
+// Pantalla de alta/edicion de un gasto: nombre, categoria, fecha, moneda (ARS/USD) y monto.
 class ExpenseFormScreen extends ConsumerStatefulWidget {
   static const nameNew = 'ExpenseFormScreenNew';
   static const nameEdit = 'ExpenseFormScreenEdit';
 
+  // Si viene un id estamos editando; si es null, es alta.
   final String? expenseId;
   const ExpenseFormScreen({super.key, this.expenseId});
 
@@ -33,11 +35,13 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
   DateTime _date = DateTime.now();
   Currency _currency = Currency.ars;
   String _dolarType = DolarType.tarjeta.code;
+  // Flag para hidratar el form una sola vez cuando llega el gasto a editar.
   bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
+    // Primero cargamos las categorias y, si estamos editando, traemos el gasto.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await ref.read(expenseFormViewModelProvider.notifier).loadCategories();
       if (widget.expenseId != null) {
@@ -55,10 +59,12 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
     super.dispose();
   }
 
+  // Vuelca los datos del gasto a editar en los controles del form (una sola vez).
   void _hydrateFromState(Expense expense) {
     if (_initialized) return;
     _initialized = true;
     _nameCtrl.text = expense.name;
+    // Si fue en USD mostramos el monto original ingresado, no el convertido a ARS.
     final amountToShow = expense.currency == Currency.usd
         ? (expense.originalAmount ?? expense.amountArs)
         : expense.amountArs;
@@ -71,6 +77,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
     });
   }
 
+  // Abre el date picker (no permite fechas futuras) y guarda la elegida.
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -81,9 +88,11 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
     if (picked != null) setState(() => _date = picked);
   }
 
+  // Valida, arma el monto (convirtiendo USD->ARS si hace falta) y manda a guardar.
   void _submit() {
     FocusManager.instance.primaryFocus?.unfocus();
     if (!_formKey.currentState!.validate()) return;
+    // La categoria no la cubre el validator del form, asi que la chequeamos aparte.
     if (_categoryId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Elegi una categoria')),
@@ -91,10 +100,12 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
       return;
     }
 
+    // Aceptamos coma o punto como separador decimal.
     final amount = double.tryParse(_amountCtrl.text.replaceAll(',', '.')) ?? 0;
     final notifier = ref.read(expenseFormViewModelProvider.notifier);
     final quotes = ref.read(dolarQuotesProvider).valueOrNull ?? const [];
 
+    // En USD guardamos el equivalente en ARS y dejamos el monto original aparte.
     final amountArs = _currency == Currency.usd
         ? notifier.convertUsdToArs(amount, _dolarType, quotes)
         : amount;
@@ -111,6 +122,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
     );
   }
 
+  // Arma la UI del formulario de gasto (detalle, monto y, si es USD, cotizacion).
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(expenseFormViewModelProvider);
@@ -121,6 +133,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
       _hydrateFromState(state.expense!);
     }
 
+    // Reacciona al guardado: si salio bien cierra, si fallo muestra el error.
     ref.listen(expenseFormViewModelProvider, (_, next) {
       if (next.wasSaved) {
         Navigator.of(context).pop(true);
@@ -222,6 +235,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
                       return null;
                     },
                   ),
+                  // Solo si el gasto es en USD pedimos el tipo de cotizacion y la mostramos.
                   if (_currency == Currency.usd) ...[
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
@@ -259,6 +273,7 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
   }
 }
 
+// Cajita que muestra la cotizacion del dolar segun el tipo elegido (o avisa si no hay).
 class _DolarQuoteBox extends StatelessWidget {
   final AsyncValue<List<DolarQuote>> quotesAsync;
   final String dolarTypeCode;
@@ -289,6 +304,7 @@ class _DolarQuoteBox extends StatelessWidget {
         ),
       ),
       data: (quotes) {
+        // Buscamos la cotizacion que corresponde a la "casa" del tipo elegido.
         final apiCasa = DolarType.all
                 .firstWhere(
                   (t) => t.code == dolarTypeCode,
@@ -348,6 +364,7 @@ class _DolarQuoteBox extends StatelessWidget {
   }
 }
 
+// Etiqueta de seccion en mayusculas (tipo "DETALLE", "MONTO").
 class _SectionLabel extends StatelessWidget {
   final String text;
   const _SectionLabel(this.text);
@@ -366,6 +383,7 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
+// Selector horizontal de categorias en chips, con un boton "Nueva" al final para crear una.
 class _CategoryPicker extends StatelessWidget {
   final List<Category> categories;
   final String? selectedId;
@@ -457,6 +475,7 @@ class _CategoryPicker extends StatelessWidget {
   }
 }
 
+// Toggle Pesos/Dolares para elegir la moneda del gasto.
 class _CurrencyToggle extends StatelessWidget {
   final Currency currency;
   final ValueChanged<Currency> onChanged;
@@ -492,6 +511,7 @@ class _CurrencyToggle extends StatelessWidget {
   }
 }
 
+// Cada uno de los dos botones del toggle de moneda.
 class _ToggleButton extends StatelessWidget {
   final String label;
   final bool selected;

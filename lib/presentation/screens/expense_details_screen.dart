@@ -10,15 +10,18 @@ import '../utils/formatter.dart';
 import '../viewmodels/providers.dart';
 import 'expense_form_screen.dart';
 
+// Pantalla de detalle de un gasto: muestra monto, categoria, fechas y permite editar/borrar.
 class ExpenseDetailsScreen extends ConsumerWidget {
   static const name = 'ExpenseDetailsScreen';
   final String expenseId;
   const ExpenseDetailsScreen({super.key, required this.expenseId});
 
+  // Arma la UI del detalle del gasto a partir del estado del ViewModel.
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(expenseDetailsViewModelProvider(expenseId));
 
+    // Si el gasto se elimino, cerramos la pantalla devolviendo true.
     ref.listen(expenseDetailsViewModelProvider(expenseId), (_, next) {
       if (next.wasDeleted) {
         Navigator.of(context).pop(true);
@@ -59,6 +62,7 @@ class ExpenseDetailsScreen extends ConsumerWidget {
         idle: () {
           final expense = state.expense;
           if (expense == null) return const SizedBox();
+          // Datos de la categoria con fallback por si el gasto quedo sin categoria.
           final categoryColor = state.category?.color ?? AppColors.mangoOrange;
           final iconKey =
               state.category?.iconKey ?? CategoryIcons.other.key;
@@ -123,6 +127,7 @@ class ExpenseDetailsScreen extends ConsumerWidget {
                         letterSpacing: -0.5,
                       ),
                     ),
+                    // Si se pago en dolares, mostramos tambien el monto original y el tipo.
                     if (expense.currency == Currency.usd &&
                         expense.originalAmount != null) ...[
                       const SizedBox(height: 4),
@@ -148,11 +153,13 @@ class ExpenseDetailsScreen extends ConsumerWidget {
                 label: 'Cargado el',
                 value: Fmt.longDate(expense.createdAt),
               ),
-              if (expense.updatedAt != null)
+              // updatedAt siempre existe (= createdAt al crear); solo mostramos
+              // la fila si el gasto se edito realmente despues de crearse.
+              if (expense.updatedAt.isAfter(expense.createdAt))
                 _DetailRow(
                   icon: Icons.edit_calendar_outlined,
                   label: 'Actualizado',
-                  value: Fmt.longDate(expense.updatedAt!),
+                  value: Fmt.longDate(expense.updatedAt),
                 ),
               const SizedBox(height: 24),
               OutlinedButton.icon(
@@ -175,6 +182,7 @@ class ExpenseDetailsScreen extends ConsumerWidget {
     );
   }
 
+  // Pide confirmacion y, si aceptan, manda a borrar el gasto.
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -202,6 +210,7 @@ class ExpenseDetailsScreen extends ConsumerWidget {
   }
 }
 
+// Fila reutilizable de "etiqueta + valor" con iconito (fecha, cargado el, etc.).
 class _DetailRow extends StatelessWidget {
   final IconData icon;
   final String label;

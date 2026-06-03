@@ -10,6 +10,7 @@ import '../../utils/base_screen_state.dart';
 import '../providers.dart';
 import '../states/statistics_state.dart';
 
+// El cerebro de la pantalla de estadisticas: arma el gasto por categoria del mes elegido.
 class StatisticsNotifier extends Notifier<StatisticsState> {
   late final ExpensesRepository _expensesRepo =
       ref.read(expensesRepositoryProvider);
@@ -19,6 +20,7 @@ class StatisticsNotifier extends Notifier<StatisticsState> {
   @override
   StatisticsState build() => StatisticsState();
 
+  // Trae los gastos del mes seleccionado y calcula el total y las porciones de la torta.
   Future<void> load() async {
     final user = ref.read(authViewModelProvider).user;
     if (user == null) return;
@@ -28,6 +30,7 @@ class StatisticsNotifier extends Notifier<StatisticsState> {
     try {
       final categories = await _categoriesRepo.getAllCategories(user.id);
 
+      // Calculamos el primer y ultimo instante del mes elegido para filtrar los gastos.
       final start = DateTime(
           state.selectedMonth.year, state.selectedMonth.month, 1);
       final end = DateTime(
@@ -55,6 +58,7 @@ class StatisticsNotifier extends Notifier<StatisticsState> {
     }
   }
 
+  // Se mueve al mes anterior y recarga las estadisticas.
   void goToPreviousMonth() {
     final prev = DateTime(
         state.selectedMonth.year, state.selectedMonth.month - 1, 1);
@@ -62,6 +66,7 @@ class StatisticsNotifier extends Notifier<StatisticsState> {
     load();
   }
 
+  // Avanza al mes siguiente, pero nunca mas alla del mes actual.
   void goToNextMonth() {
     final next = DateTime(
         state.selectedMonth.year, state.selectedMonth.month + 1, 1);
@@ -71,6 +76,7 @@ class StatisticsNotifier extends Notifier<StatisticsState> {
     load();
   }
 
+  // Dice si se puede avanzar de mes (no dejamos ir al futuro).
   bool get canGoNext {
     final currentMonth = DateTime(DateTime.now().year, DateTime.now().month, 1);
     final next = DateTime(
@@ -78,12 +84,14 @@ class StatisticsNotifier extends Notifier<StatisticsState> {
     return !next.isAfter(currentMonth);
   }
 
+  // Salta a un mes puntual (elegido desde el selector) y recarga.
   void selectMonth(DateTime month) {
     final normalized = DateTime(month.year, month.month, 1);
     state = state.copyWith(selectedMonth: normalized);
     load();
   }
 
+  // Agrupa los gastos por categoria y arma cada porcion de la torta, ordenadas de mayor a menor.
   List<CategorySlice> _buildPieSlices(
     List<Expense> expenses,
     List<Category> categories,
