@@ -19,6 +19,8 @@ class CategoryListScreen extends ConsumerStatefulWidget {
 }
 
 class _CategoryListScreenState extends ConsumerState<CategoryListScreen> {
+  final _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -26,6 +28,25 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(categoriesListViewModelProvider.notifier).fetch();
     });
+    // Escuchamos el scroll para disparar el paginado.
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// Detecta proximidad al final de la lista para cargar mas paginas.
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      final user = ref.read(authViewModelProvider).user;
+      if (user != null) {
+        ref.read(categoriesListViewModelProvider.notifier).loadMore(user.id);
+      }
+    }
   }
 
   // Vuelve a pedir las categorias (pull-to-refresh o al volver de otra pantalla).
@@ -121,9 +142,19 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen> {
           return RefreshIndicator(
             onRefresh: _refresh,
             child: ListView.builder(
+              controller: _scrollController,
               padding: const EdgeInsets.only(top: 8, bottom: 100),
-              itemCount: state.categories.length,
+              // Sumamos 1 item extra al final para el spinner de "cargando mas".
+              itemCount:
+                  state.categories.length + (state.isLoadingMore ? 1 : 0),
               itemBuilder: (context, index) {
+                // El ultimo item (cuando paginamos) es el loader.
+                if (index >= state.categories.length) {
+                  return const Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
                 final category = state.categories[index];
                 return CategoryItem(
                   category: category,

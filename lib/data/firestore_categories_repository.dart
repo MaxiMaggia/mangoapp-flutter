@@ -50,6 +50,29 @@ class FirestoreCategoriesRepositoryImpl implements CategoriesRepository {
     }
   }
 
+  // Trae una pagina de categorias usando cursor (titleLower del ultimo item).
+  // Mismo patron que getExpenses del repo de gastos. Usa el indice compuesto
+  // ya existente (userId + status + titleLower).
+  @override
+  Future<List<Category>> getCategoriesPaginated({
+    required String userId,
+    required int limit,
+    String? lastTitleLower,
+  }) async {
+    Query<Category> query = _collection
+        .where('userId', isEqualTo: userId)
+        .where('status', isEqualTo: EntityStatus.available.name)
+        .orderBy('titleLower')
+        .limit(limit);
+
+    if (lastTitleLower != null) {
+      query = query.startAfter([lastTitleLower]);
+    }
+
+    final snapshot = await query.get();
+    return snapshot.docs.map((doc) => doc.data()).toList();
+  }
+
   // Busca una categoria por id; devuelve null si no existe o esta borrada.
   @override
   Future<Category?> getCategoryById(String id) async {
