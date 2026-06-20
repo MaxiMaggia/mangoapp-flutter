@@ -4,7 +4,6 @@ import '../domain/app_user.dart';
 import '../domain/auth_repository.dart';
 import '../domain/categories_repository.dart';
 import '../domain/entity_status.dart';
-import '../domain/expenses_repository.dart';
 import '../domain/users_repository.dart';
 
 // Implementa la autenticacion usando Firebase Auth, y coordina los datos del usuario en Firestore.
@@ -12,14 +11,12 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
   // Recibe los otros repos (para crear/borrar datos del usuario) y opcionalmente una instancia de FirebaseAuth.
   FirebaseAuthRepositoryImpl(
     this._categoriesRepo,
-    this._usersRepo,
-    this._expensesRepo, {
+    this._usersRepo, {
     firebase_auth.FirebaseAuth? auth,
   }) : _auth = auth ?? firebase_auth.FirebaseAuth.instance;
 
   final CategoriesRepository _categoriesRepo;
   final UsersRepository _usersRepo;
-  final ExpensesRepository _expensesRepo;
   final firebase_auth.FirebaseAuth _auth;
 
   // El usuario logueado ahora mismo, o null si no hay sesion.
@@ -129,9 +126,9 @@ class FirebaseAuthRepositoryImpl implements AuthRepository {
       );
       await user.reauthenticateWithCredential(credential);
 
-      await _expensesRepo.markAllUserExpensesAsDeleted(uid);
-      await _categoriesRepo.markAllUserCategoriesAsDeleted(uid);
-      await _usersRepo.markUserAsDeleted(uid);
+      // Borrado en cascada y atomico: gastos + categorias + usuario en uno o
+      // mas WriteBatch. Si se corta la conexion, no queda nada a medias.
+      await _usersRepo.deleteUserDataInCascade(uid);
 
       await _auth.signOut();
     } on firebase_auth.FirebaseAuthException catch (e) {

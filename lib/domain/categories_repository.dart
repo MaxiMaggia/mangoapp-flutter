@@ -23,8 +23,4 @@ abstract interface class CategoriesRepository {
   Future<void> deleteCategoryById(String id);
   // Carga las categorias por defecto para un usuario recien creado.
   Future<void> seedDefaultCategories(String userId);
-
-  /// Marca todas las categorias del usuario como deleted. Usado en el flujo
-  /// de borrado de cuenta.
-  Future<void> markAllUserCategoriesAsDeleted(String userId);
 }

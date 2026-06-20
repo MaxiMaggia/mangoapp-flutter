@@ -30,8 +30,4 @@ abstract interface class ExpensesRepository {
     required DateTime from,
     required DateTime to,
   });
-
-  /// Marca todos los gastos del usuario como deleted. Usado en el flujo de
-  /// borrado de cuenta.
-  Future<void> markAllUserExpensesAsDeleted(String userId);
 }

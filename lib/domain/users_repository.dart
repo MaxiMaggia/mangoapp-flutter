@@ -6,6 +6,10 @@ abstract interface class UsersRepository {
   Future<void> createUserDocument(AppUser user);
   // Trae el usuario por id, o null si no existe.
   Future<AppUser?> getUserById(String userId);
-  // Marca al usuario como borrado (soft delete, no lo elimina de verdad).
-  Future<void> markUserAsDeleted(String userId);
+
+  /// Borrado en cascada y atomico de toda la data del usuario (gastos +
+  /// categorias + el propio documento de usuario) como soft delete, en uno o
+  /// mas WriteBatch. Usado en el flujo de borrado de cuenta: o se marca todo o
+  /// no se marca nada.
+  Future<void> deleteUserDataInCascade(String userId);
 }

@@ -115,27 +115,6 @@ class FirestoreCategoriesRepositoryImpl implements CategoriesRepository {
     });
   }
 
-  // Marca todas las categorias del usuario como borradas (usado al eliminar la cuenta).
-  @override
-  Future<void> markAllUserCategoriesAsDeleted(String userId) async {
-    final snapshot = await _collection
-        .where('userId', isEqualTo: userId)
-        .where('status', isEqualTo: EntityStatus.available.name)
-        .get();
-    if (snapshot.docs.isEmpty) return;
-
-    // Todo en un batch para que sea una sola operacion atomica.
-    final batch = _firestore.batch();
-    final now = Timestamp.now();
-    for (final doc in snapshot.docs) {
-      batch.update(doc.reference, {
-        'status': EntityStatus.deleted.name,
-        'deletedAt': now,
-      });
-    }
-    await batch.commit();
-  }
-
   // Le crea al usuario nuevo un set de categorias por defecto (comida, transporte, etc.).
   @override
   Future<void> seedDefaultCategories(String userId) async {

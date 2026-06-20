@@ -20,7 +20,6 @@ final authRepositoryProvider = Provider<AuthRepository>(
   (ref) => FirebaseAuthRepositoryImpl(
     ref.read(categoriesRepositoryProvider),
     ref.read(usersRepositoryProvider),
-    ref.read(expensesRepositoryProvider),
   ),
 );
 
